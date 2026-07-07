@@ -1,0 +1,159 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: recon-platform
+  profiles:
+    active: dev
+
+  # MySQL 数据源配置
+  datasource:
+    url: jdbc:mysql://localhost:3306/recon_platform?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      minimum-idle: 10
+      maximum-pool-size: 50
+      idle-timeout: 300000
+      max-lifetime: 1200000
+      connection-timeout: 30000
+      pool-name: ReconHikariPool
+
+  # Redis 配置
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password:
+      database: 0
+      timeout: 5000ms
+      lettuce:
+        pool:
+          max-active: 32
+          max-idle: 16
+          min-idle: 8
+          max-wait: 3000ms
+
+  # Kafka 配置
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 3
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      group-id: recon-platform
+      auto-offset-reset: earliest
+      properties:
+        spring.json.trusted.packages: "*"
+
+  # Jackson 配置
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+    serialization:
+      write-dates-as-timestamps: false
+
+  # Servlet 配置
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 100MB
+
+# MyBatis-Plus 配置
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  type-aliases-package: com.recon.module.*.entity
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+  configuration:
+    map-underscore-to-camel-case: true
+    cache-enabled: false
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+# JWT 配置
+jwt:
+  secret: recon-platform-jwt-secret-key-must-be-at-least-256-bits-long
+  expiration: 900000        # 15 minutes (access token)
+  refresh-expiration: 604800000  # 7 days (refresh token)
+
+# AI 服务配置
+ai:
+  llm:
+    provider: openai        # openai / claude / local
+    api-key: ${AI_API_KEY:your-api-key}
+    api-base: ${AI_API_BASE:https://api.openai.com/v1}
+    default-model: gpt-4o
+    simple-model: gpt-4o-mini
+    reasoning-model: gpt-4o
+  embedding:
+    model: bge-m3
+    dimension: 1024
+    local: true
+  semantic-match:
+    embedding-threshold: 0.75
+    llm-threshold-auto: 0.85
+    llm-threshold-recommend: 0.70
+    candidate-limit: 100
+    fine-rank-limit: 3
+
+# 许可证配置
+license:
+  enabled: true                                           # 是否启用许可证校验
+  secret: recon-platform-license-default-secret-key       # 许可证加密密钥 (生产环境请覆盖)
+
+# 对账引擎配置
+recon:
+  engine:
+    batch-size: 1000            # 批量处理大小
+    parallelism: 4              # 并行度
+    date-window-days: 7         # 日期窗口（天）
+    amount-tolerance-pct: 0.01  # 金额容差百分比
+    max-split-combinations: 100  # 拆单最大组合数
+  schedule:
+    enabled: true
+    pool-size: 8
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    com.recon: DEBUG
+    org.springframework.security: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"
+
+# Actuator 配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# Knife4j API 文档配置
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
