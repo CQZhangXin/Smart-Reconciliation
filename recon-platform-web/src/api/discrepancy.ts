@@ -1,5 +1,5 @@
 import { get, post, put } from './request'
-import type { ReconDiscrepancy, ReconAdjustment, PageResult, PageQuery } from '@/types'
+import type { ReconDiscrepancy, ReconAdjustment, RootCauseResult, PageResult, PageQuery } from '@/types'
 
 // ========== 差异管理 ==========
 
@@ -18,9 +18,14 @@ export function classifyDiscrepancy(id: number): Promise<ReconDiscrepancy> {
   return post(`/discrepancy/${id}/classify`)
 }
 
+/** 根因分析 */
+export function getRootCauseAnalysis(id: number): Promise<RootCauseResult> {
+  return post(`/discrepancy/${id}/root-cause`)
+}
+
 /** 批量AI分类 */
-export function batchClassify(taskId: number): Promise<void> {
-  return post('/discrepancy/batch-classify', null, { params: { taskId } })
+export function batchClassify(ids: number[]): Promise<void> {
+  return post('/discrepancy/batch-classify', { ids })
 }
 
 /** 分配处理人 */
@@ -39,8 +44,8 @@ export function closeDiscrepancy(id: number, resolvedBy: number): Promise<ReconD
 }
 
 /** 查询SLA超期差异 */
-export function listSlaOverdue(orgId: number): Promise<ReconDiscrepancy[]> {
-  return get('/discrepancy/sla-overdue', { orgId })
+export function getSlaOverdue(): Promise<ReconDiscrepancy[]> {
+  return get('/discrepancy/sla-overdue')
 }
 
 /** 查询差异统计 */

@@ -76,7 +76,7 @@
 
     <!-- 表单对话框 -->
     <el-dialog v-model="formVisible" :title="formData.id ? '编辑调整' : '新增调整'" width="550px" destroy-on-close>
-      <el-form ref="formRef" :model="formData" label-width="100px">
+      <el-form ref="formRef" :model="formData" :rules="rules" label-width="100px">
         <el-form-item label="关联差异ID" prop="discrepancyId">
           <el-input-number v-model="formData.discrepancyId" :min="1" style="width:100%" />
         </el-form-item>
@@ -130,6 +130,7 @@
 import { reactive, ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import type { FormInstance } from 'element-plus'
 import { pageAdjustment, createAdjustment, approveAdjustment } from '@/api/discrepancy'
 import { useAppStore } from '@/stores/app'
 import type { ReconAdjustment } from '@/types'
@@ -140,6 +141,12 @@ const loading = ref(false)
 const total = ref(0)
 const tableData = ref<ReconAdjustment[]>([])
 const formVisible = ref(false)
+const formRef = ref<FormInstance>()
+
+const rules = {
+  amount: [{ required: true, message: '请输入调整金额', trigger: 'blur' }],
+  description: [{ required: true, message: '请输入调整说明', trigger: 'blur' }]
+}
 
 const discrepancyIdParam = Number(route.query.discrepancyId || 0)
 const query = reactive({ page: 1, size: 20, orgId: appStore.currentOrgId, status: '', discrepancyId: discrepancyIdParam || undefined })
@@ -188,6 +195,8 @@ function openForm() {
 }
 
 async function handleSubmit() {
+  const valid = await formRef.value?.validate().catch(() => false)
+  if (!valid) return
   try {
     await createAdjustment(formData)
     ElMessage.success('创建成功')

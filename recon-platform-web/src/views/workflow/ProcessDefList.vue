@@ -45,7 +45,7 @@
 
     <!-- 流程表单 -->
     <el-dialog v-model="formVisible" :title="formData.id ? '编辑流程' : '新建流程'" width="550px" destroy-on-close>
-      <el-form :model="formData" label-width="100px">
+      <el-form ref="formRef" :model="formData" :rules="rules" label-width="100px">
         <el-form-item label="流程名称" prop="processName">
           <el-input v-model="formData.processName" placeholder="如: 差异审批流程" />
         </el-form-item>
@@ -80,6 +80,7 @@
 <script setup lang="ts">
 import { reactive, ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import type { FormInstance } from 'element-plus'
 import { Delete } from '@element-plus/icons-vue'
 import { pageProcessDef, createProcessDef, publishProcessDef } from '@/api/workflow'
 import { useAppStore } from '@/stores/app'
@@ -89,6 +90,12 @@ const appStore = useAppStore()
 const loading = ref(false)
 const tableData = ref<WfProcessDefinition[]>([])
 const formVisible = ref(false)
+const formRef = ref<FormInstance>()
+
+const rules = {
+  processName: [{ required: true, message: '请输入流程名称', trigger: 'blur' }],
+  processKey: [{ required: true, message: '请输入流程KEY', trigger: 'blur' }]
+}
 
 const query = reactive({ page: 1, size: 20, orgId: appStore.currentOrgId })
 const formData = reactive<WfProcessDefinition>({
@@ -100,7 +107,8 @@ async function loadData() {
   try {
     const res = await pageProcessDef(query)
     tableData.value = res.records
-  } catch {
+  } catch (e: any) {
+    ElMessage.error('加载流程定义失败: ' + (e?.message || '未知错误'))
     tableData.value = []
   }
   loading.value = false
@@ -127,11 +135,13 @@ function removeStep(index: number) {
 }
 
 async function handleSubmit() {
+  const valid = await formRef.value?.validate().catch(() => false)
+  if (!valid) return
   try {
     await createProcessDef(formData)
     ElMessage.success('保存成功')
-  } catch {
-    ElMessage.success('保存成功(Mock)')
+  } catch (e: any) {
+    ElMessage.error('保存失败: ' + (e?.message || '未知错误'))
   }
   formVisible.value = false
   loadData()
@@ -141,8 +151,8 @@ async function handlePublish(row: WfProcessDefinition) {
   try {
     await publishProcessDef(row.id!)
     ElMessage.success('已发布')
-  } catch {
-    ElMessage.success('已发布(Mock)')
+  } catch (e: any) {
+    ElMessage.error('发布失败: ' + (e?.message || '未知错误'))
   }
   loadData()
 }

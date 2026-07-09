@@ -79,7 +79,8 @@ async function loadData() {
     const res = await pageMyApprovals(query)
     tableData.value = res.records
     total.value = res.total
-  } catch {
+  } catch (e: any) {
+    ElMessage.error('加载审批列表失败: ' + (e?.message || '未知错误'))
     tableData.value = []
     total.value = 0
   }
@@ -89,21 +90,28 @@ async function loadData() {
 function handleSearch() { query.page = 1; loadData() }
 
 async function handleAction(row: WfApprovalRecord, action: string) {
+  let comment: string | undefined
   try {
-    const { value: comment } = await ElMessageBox.prompt(
+    const result = await ElMessageBox.prompt(
       `请输入${action === 'APPROVE' ? '审批' : '拒绝'}意见`,
       action === 'APPROVE' ? '审批通过' : '拒绝',
       { confirmButtonText: '确定', cancelButtonText: '取消' }
     )
+    comment = result.value || ''
+  } catch {
+    // 用户取消操作
+    return
+  }
+  try {
     await approve(row.id!, {
       approverId: 1, approverName: '当前用户',
       action, comment: comment || ''
     })
     ElMessage.success(action === 'APPROVE' ? '已通过' : '已拒绝')
-  } catch {
-    // 取消
+    loadData()
+  } catch (e: any) {
+    ElMessage.error('操作失败: ' + (e?.message || '未知错误'))
   }
-  loadData()
 }
 
 function showDetail(row: WfApprovalRecord) {

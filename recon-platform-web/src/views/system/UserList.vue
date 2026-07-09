@@ -46,7 +46,7 @@
 
     <!-- 用户表单 -->
     <el-dialog v-model="formVisible" :title="formData.id ? '编辑用户' : '新增用户'" width="500px" destroy-on-close>
-      <el-form :model="formData" label-width="90px">
+      <el-form ref="formRef" :model="formData" :rules="rules" label-width="90px">
         <el-form-item label="用户名" prop="username">
           <el-input v-model="formData.username" placeholder="请输入用户名" />
         </el-form-item>
@@ -58,7 +58,7 @@
         </el-form-item>
         <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="邮箱">
+            <el-form-item label="邮箱" prop="email">
               <el-input v-model="formData.email" placeholder="请输入邮箱" />
             </el-form-item>
           </el-col>
@@ -102,6 +102,7 @@
 <script setup lang="ts">
 import { reactive, ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import type { FormInstance } from 'element-plus'
 import { pageUser, createUser, updateUser, deleteUser, getUserRoles, assignUserRoles } from '@/api/system'
 import { useAppStore } from '@/stores/app'
 import type { SysUser, SysRole } from '@/types'
@@ -111,10 +112,17 @@ const loading = ref(false)
 const total = ref(0)
 const tableData = ref<SysUser[]>([])
 const formVisible = ref(false)
+const formRef = ref<FormInstance>()
 const roleVisible = ref(false)
 const currentUser = ref<SysUser | null>(null)
 const allRoles = ref<SysRole[]>([])
 const selectedRoleIds = ref<number[]>([])
+
+const rules = {
+  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }, { min: 3, max: 50, message: '用户名长度3-50个字符', trigger: 'blur' }],
+  password: [{ required: true, message: '请输入密码', trigger: 'blur' }, { min: 6, message: '密码长度至少6位', trigger: 'blur' }],
+  email: [{ type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' }]
+}
 
 const query = reactive({ page: 1, size: 20, orgId: appStore.currentOrgId })
 const formData = reactive<SysUser>({
@@ -127,7 +135,7 @@ async function loadData() {
     const res = await pageUser(query)
     tableData.value = res.records
     total.value = res.total
-  } catch { tableData.value = []; total.value = 0 }
+  } catch (e: any) { ElMessage.error('加载用户失败: ' + (e?.message || '未知错误')); tableData.value = []; total.value = 0 }
   loading.value = false
 }
 
@@ -143,6 +151,8 @@ function openForm(row?: SysUser) {
 }
 
 async function handleSubmit() {
+  const valid = await formRef.value?.validate().catch(() => false)
+  if (!valid) return
   try {
     if (formData.id) {
       await updateUser(formData.id, formData)
@@ -151,15 +161,21 @@ async function handleSubmit() {
       await createUser(formData)
       ElMessage.success('创建成功')
     }
-  } catch { ElMessage.success(formData.id ? '更新成功(Mock)' : '创建成功(Mock)') }
-  formVisible.value = false
-  loadData()
+    formVisible.value = false
+    loadData()
+  } catch (e: any) {
+    ElMessage.error('操作失败: ' + (e?.message || '未知错误'))
+  }
 }
 
 async function handleDelete(id: number) {
-  try { await deleteUser(id) } catch {}
-  ElMessage.success('删除成功')
-  loadData()
+  try {
+    await deleteUser(id)
+    ElMessage.success('删除成功')
+    loadData()
+  } catch (e: any) {
+    ElMessage.error('删除失败: ' + (e?.message || '未知错误'))
+  }
 }
 
 async function handleAssignRoles(row: SysUser) {
@@ -186,7 +202,7 @@ async function handleSaveRoles() {
   try {
     await assignUserRoles(currentUser.value.id!, selectedRoleIds.value)
     ElMessage.success('角色分配成功')
-  } catch { ElMessage.success('角色分配成功(Mock)') }
+  } catch (e: any) { ElMessage.error('角色分配失败: ' + (e?.message || '未知错误')) }
   roleVisible.value = false
 }
 

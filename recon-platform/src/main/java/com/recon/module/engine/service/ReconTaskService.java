@@ -181,7 +181,10 @@ public class ReconTaskService {
 
         try {
             // 3. 调用匹配引擎执行对账
-            List<RawRecord> unmatchedRecords = matchingEngineService.executeReconciliation(task);
+            MatchingEngineService.ReconResult result = matchingEngineService.executeReconciliation(task);
+            List<RawRecord> unmatchedRecords = new ArrayList<>();
+            unmatchedRecords.addAll(result.getUnmatchedA());
+            unmatchedRecords.addAll(result.getUnmatchedB());
             log.info("匹配引擎执行完成: taskId={}, unmatchedCount={}", taskId, unmatchedRecords.size());
 
             // 4. 生成差异记录
@@ -207,6 +210,7 @@ public class ReconTaskService {
             }
 
             // 批量保存差异记录
+            // TODO: 生产环境建议使用 MyBatis-Plus saveBatch() 批量插入以提高性能
             if (!discrepancies.isEmpty()) {
                 for (ReconDiscrepancy discrepancy : discrepancies) {
                     reconDiscrepancyMapper.insert(discrepancy);
@@ -214,16 +218,12 @@ public class ReconTaskService {
                 log.info("差异记录生成完成: taskId={}, count={}", taskId, discrepancyCount);
             }
 
-            // 5. 统计匹配结果
+            // 5. 统计匹配结果（使用引擎返回的 ReconResult 统计值）
             int totalCount = (task.getTotalACount() != null ? task.getTotalACount() : 0)
                     + (task.getTotalBCount() != null ? task.getTotalBCount() : 0);
             int unmatchedCount = unmatchedRecords.size();
-            int matchedCount = Math.max(0, totalCount - unmatchedCount);
-
-            // 重新从数据库统计确认的匹配记录数
-            LambdaQueryWrapper<ReconMatch> matchWrapper = new LambdaQueryWrapper<>();
-            matchWrapper.eq(ReconMatch::getTaskId, taskId);
-            Long actualMatchedCount = reconMatchMapper.selectCount(matchWrapper);
+            int totalMatchedCount = result.getExactMatched() + result.getRuleMatched()
+                    + result.getAiMatched() + result.getSplitMatched();
 
             // 6. 更新任务结果
             LocalDateTime completedAt = LocalDateTime.now();
@@ -231,12 +231,12 @@ public class ReconTaskService {
 
             BigDecimal matchRate = BigDecimal.ZERO;
             if (totalCount > 0) {
-                matchRate = BigDecimal.valueOf(actualMatchedCount)
+                matchRate = BigDecimal.valueOf(totalMatchedCount)
                         .multiply(BigDecimal.valueOf(100))
                         .divide(BigDecimal.valueOf(totalCount), 2, RoundingMode.HALF_UP);
             }
 
-            task.setMatchedCount(actualMatchedCount.intValue());
+            task.setMatchedCount(totalMatchedCount);
             task.setUnmatchedCount(unmatchedCount);
             task.setDiscrepancyCount(discrepancyCount);
             task.setMatchRate(matchRate);
@@ -246,7 +246,7 @@ public class ReconTaskService {
             reconTaskMapper.updateById(task);
 
             log.info("对账任务执行完成: taskId={}, matched={}, unmatched={}, discrepancy={}, matchRate={}%, durationMs={}",
-                    taskId, actualMatchedCount, unmatchedCount, discrepancyCount, matchRate, durationMs);
+                    taskId, totalMatchedCount, unmatchedCount, discrepancyCount, matchRate, durationMs);
 
         } catch (Exception e) {
             log.error("对账任务执行失败: taskId={}", taskId, e);
@@ -287,7 +287,7 @@ public class ReconTaskService {
      * @param page      页码
      * @param size      每页条数
      * @param taskId    任务ID（可选）
-     * @param matchType 匹配类型（可选）：EXACT、FUZZY、AI_SUGGESTED
+     * @param matchType 匹配类型（可选）：EXACT、RULE、AI_SEMANTIC、AI_SPLIT
      * @param status    状态（可选）
      * @return 分页结果
      */
@@ -317,6 +317,9 @@ public class ReconTaskService {
     @Transactional(rollbackFor = Exception.class)
     public void confirmMatch(Long matchId, Long reviewedBy) {
         ReconMatch match = getMatchById(matchId);
+        if (!"PENDING_REVIEW".equals(match.getStatus())) {
+            throw new BusinessException(ResultCode.PARAM_ERROR, "只有待审核状态的匹配记录可以确认");
+        }
         match.setStatus(STATUS_MANUAL_CONFIRMED);
         match.setReviewedBy(reviewedBy);
         match.setReviewedAt(LocalDateTime.now());
@@ -336,6 +339,9 @@ public class ReconTaskService {
     @Transactional(rollbackFor = Exception.class)
     public void rejectMatch(Long matchId, Long reviewedBy, String comment) {
         ReconMatch match = getMatchById(matchId);
+        if (!"PENDING_REVIEW".equals(match.getStatus())) {
+            throw new BusinessException(ResultCode.PARAM_ERROR, "只有待审核状态的匹配记录可以驳回");
+        }
         match.setStatus(STATUS_REJECTED);
         match.setReviewedBy(reviewedBy);
         match.setReviewedAt(LocalDateTime.now());

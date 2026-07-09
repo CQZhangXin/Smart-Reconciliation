@@ -216,8 +216,8 @@ async function loadData() {
     const res = await pageDataSource(query)
     tableData.value = res.records
     total.value = res.total
-  } catch {
-    // 接口未就绪时使用模拟数据
+  } catch (e: any) {
+    ElMessage.error('加载数据源失败: ' + (e?.message || '未知错误'))
     tableData.value = []
     total.value = 0
   }
@@ -263,11 +263,8 @@ async function handleSubmit() {
     }
     formVisible.value = false
     loadData()
-  } catch {
-    // mock模式
-    ElMessage.success(formData.id ? '更新成功(Mock)' : '创建成功(Mock)')
-    formVisible.value = false
-    loadData()
+  } catch (e: any) {
+    ElMessage.error('操作失败: ' + (e?.message || '未知错误'))
   }
   submitting.value = false
 }
@@ -277,9 +274,8 @@ async function handleDelete(id: number) {
     await deleteDataSource(id)
     ElMessage.success('删除成功')
     loadData()
-  } catch {
-    ElMessage.success('删除成功(Mock)')
-    loadData()
+  } catch (e: any) {
+    ElMessage.error('删除失败: ' + (e?.message || '未知错误'))
   }
 }
 
@@ -287,8 +283,8 @@ async function handleTestConnection(row: DataSource) {
   try {
     const ok = await testConnection(row.id!)
     ElMessage[ok ? 'success' : 'error'](ok ? '连接测试成功' : '连接测试失败')
-  } catch {
-    ElMessage.success('连接测试成功(Mock)')
+  } catch (e: any) {
+    ElMessage.error('连接测试失败: ' + (e?.message || '未知错误'))
   }
 }
 
@@ -296,13 +292,13 @@ async function handleSync(row: DataSource) {
   try {
     await syncDataSource(row.id!)
     ElMessage.success('同步任务已提交')
-  } catch {
-    ElMessage.success('同步任务已提交(Mock)')
+  } catch (e: any) {
+    ElMessage.error('同步失败: ' + (e?.message || '未知错误'))
   }
 }
 
 function handleToggleStatus(row: DataSource, val: boolean) {
-  ElMessage.info(`${val ? '启用' : '停用'}数据源: ${row.dsName} (Mock)`)
+  ElMessage.info(`${val ? '启用' : '停用'}数据源: ${row.dsName}`)
 }
 
 onMounted(() => { loadData() })

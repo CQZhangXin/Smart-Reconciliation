@@ -1,5 +1,5 @@
 import { get, post, put, del } from './request'
-import type { DataSource, PageResult, PageQuery } from '@/types'
+import type { DataSource, FieldMappingSuggestion, PageResult, PageQuery } from '@/types'
 
 /** 分页查询数据源 */
 export function pageDataSource(params: PageQuery): Promise<PageResult<DataSource>> {
@@ -39,4 +39,9 @@ export function syncDataSource(id: number): Promise<any> {
 /** 分页查询原始记录 */
 export function pageRecords(sourceId: number, params: PageQuery): Promise<PageResult<any>> {
   return get(`/datasource/${sourceId}/records/page`, params)
+}
+
+/** 获取字段映射建议 */
+export function getFieldMappingSuggestion(sourceId: number): Promise<FieldMappingSuggestion[]> {
+  return get(`/datasource/${sourceId}/field-mapping`)
 }

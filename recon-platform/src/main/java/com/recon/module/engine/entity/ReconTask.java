@@ -68,4 +68,12 @@ public class ReconTask extends BaseEntity {
     private Long durationMs;
 
     private Long createdBy;
+
+    private Long updatedBy;
+
+    private LocalDateTime scheduledAt;
+
+    private Integer retryCount;
+
+    private Long parentTaskId;
 }

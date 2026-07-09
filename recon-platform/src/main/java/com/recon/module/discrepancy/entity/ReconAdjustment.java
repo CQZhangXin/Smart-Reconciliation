@@ -9,6 +9,7 @@ import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
@@ -40,6 +41,10 @@ public class ReconAdjustment extends BaseEntity {
     private String attachmentUrls;
 
     private String status;
+
+    private LocalDate effectiveDate;
+
+    private LocalDateTime postingDate;
 
     private Long approvedBy;
 

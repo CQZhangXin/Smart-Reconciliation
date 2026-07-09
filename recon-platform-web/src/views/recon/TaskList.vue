@@ -210,7 +210,9 @@ const formData = reactive<ReconTask>({
 
 const formRules: FormRules = {
   taskName: [{ required: true, message: '请输入任务名称', trigger: 'blur' }],
-  taskType: [{ required: true, message: '请选择任务类型', trigger: 'change' }]
+  taskType: [{ required: true, message: '请选择任务类型', trigger: 'change' }],
+  sourceAId: [{ required: true, message: '请选择数据源A', trigger: 'change' }],
+  sourceBId: [{ required: true, message: '请选择数据源B', trigger: 'change' }]
 }
 
 function taskTypeLabel(type: string): string {
@@ -240,7 +242,8 @@ async function loadData() {
     const res = await pageTask(query)
     tableData.value = res.records
     total.value = res.total
-  } catch {
+  } catch (e: any) {
+    ElMessage.error('加载任务失败: ' + (e?.message || '未知错误'))
     tableData.value = []
     total.value = 0
   }
@@ -276,28 +279,30 @@ async function handleSubmit() {
     }
     formVisible.value = false
     loadData()
-  } catch {
-    ElMessage.success(formData.id ? '更新成功(Mock)' : '创建成功(Mock)')
-    formVisible.value = false
-    loadData()
+  } catch (e: any) {
+    ElMessage.error('操作失败: ' + (e?.message || '未知错误'))
   }
   submitting.value = false
 }
 
 async function handleDelete(id: number) {
-  try { await deleteTask(id) } catch {}
-  ElMessage.success('删除成功')
-  loadData()
+  try {
+    await deleteTask(id)
+    ElMessage.success('删除成功')
+    loadData()
+  } catch (e: any) {
+    ElMessage.error('删除失败: ' + (e?.message || '未知错误'))
+  }
 }
 
 async function handleExecute(row: ReconTask) {
   try {
     await executeTaskAsync(row.id!)
     ElMessage.success('任务已提交异步执行')
-  } catch {
-    ElMessage.success('任务已提交异步执行(Mock)')
+    loadData()
+  } catch (e: any) {
+    ElMessage.error('执行失败: ' + (e?.message || '未知错误'))
   }
-  loadData()
 }
 
 onMounted(() => { loadData() })

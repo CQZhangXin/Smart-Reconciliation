@@ -36,6 +36,12 @@ export function pageRole(params: PageQuery): Promise<PageResult<SysRole>> {
 export function createRole(data: SysRole): Promise<SysRole> {
   return post('/system/role', data)
 }
+export function updateRole(id: number, data: Partial<SysRole>): Promise<SysRole> {
+  return put(`/system/roles/${id}`, data)
+}
+export function deleteRole(id: number): Promise<void> {
+  return del(`/system/role/${id}`)
+}
 export function assignRolePermissions(roleId: number, permIds: number[]): Promise<void> {
   return put(`/system/role/${roleId}/permissions`, permIds)
 }
@@ -59,6 +65,12 @@ export function pageOrg(params: PageQuery): Promise<PageResult<OrgOrganization>>
 }
 export function createOrg(data: OrgOrganization): Promise<OrgOrganization> {
   return post('/system/org', data)
+}
+export function updateOrg(id: number, data: Partial<OrgOrganization>): Promise<OrgOrganization> {
+  return put(`/system/orgs/${id}`, data)
+}
+export function deleteOrg(id: number): Promise<void> {
+  return del(`/system/orgs/${id}`)
 }
 
 // ========== 账户管理 ==========

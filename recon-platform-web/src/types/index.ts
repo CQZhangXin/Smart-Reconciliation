@@ -29,7 +29,7 @@ export interface DataSource {
   id?: number
   ledgerId?: number
   dsName: string
-  dsType: string          // ERP / BANK / FILE / API
+  dsType: 'ERP' | 'BANK' | 'FILE' | 'API'
   dsCategory: string      // SOURCE_A / SOURCE_B
   provider?: string
   connConfig?: Record<string, any>
@@ -93,7 +93,7 @@ export interface ReconTask {
   id?: number
   ledgerId?: number
   taskName: string
-  taskType: string         // DAILY / MONTHLY / CUSTOM
+  taskType: 'BANK' | 'THIRD_PAYMENT' | 'AR' | 'AP' | 'INTERNAL' | 'CROSS_SYSTEM' | 'DAILY' | 'MONTHLY' | 'CUSTOM'
   sourceAId?: number
   sourceBId?: number
   ruleIds?: number[]
@@ -299,8 +299,8 @@ export interface ReportGenerateRequest {
   period: string
   matchCount?: number
   discrepancyCount?: number
-  matchRate?: string
-  trendData?: string
+  matchRate?: number
+  trendData?: Array<any>
   language?: string        // zh_CN / en_US
 }
 
@@ -411,6 +411,22 @@ export interface OrgAccount {
   accountType?: string
   status?: string
   createdAt?: string
+}
+
+// ============ 许可证 ============
+
+export interface LicenseStatus {
+  licensed: boolean
+  licenseEnabled: boolean
+  status: 'UNLICENSED' | 'ACTIVE' | 'EXPIRED' | 'EXPIRING_SOON' | 'INVALID' | 'DISABLED'
+  orgName?: string
+  orgCode?: string
+  maxUsers?: number
+  expireDate?: string
+  remainingDays?: number
+  features?: string[]
+  issuedAt?: string
+  message?: string
 }
 
 // ============ 仪表盘 ============

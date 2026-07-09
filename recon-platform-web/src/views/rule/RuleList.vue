@@ -268,7 +268,8 @@ async function loadData() {
     const res = await pageRule(query)
     tableData.value = res.records
     total.value = res.total
-  } catch {
+  } catch (e: any) {
+    ElMessage.error('加载规则失败: ' + (e?.message || '未知错误'))
     tableData.value = []
     total.value = 0
   }
@@ -320,30 +321,40 @@ async function handleSubmit() {
     }
     formVisible.value = false
     loadData()
-  } catch {
-    ElMessage.success(formData.id ? '更新成功(Mock)' : '创建成功(Mock)')
-    formVisible.value = false
-    loadData()
+  } catch (e: any) {
+    ElMessage.error('操作失败: ' + (e?.message || '未知错误'))
   }
   submitting.value = false
 }
 
 async function handleDelete(id: number) {
-  try { await deleteRule(id) } catch {}
-  ElMessage.success('删除成功')
-  loadData()
+  try {
+    await deleteRule(id)
+    ElMessage.success('删除成功')
+    loadData()
+  } catch (e: any) {
+    ElMessage.error('删除失败: ' + (e?.message || '未知错误'))
+  }
 }
 
 async function handleEnable(row: ReconRuleConfig) {
-  try { await enableRule(row.id!) } catch {}
-  ElMessage.success('已启用')
-  loadData()
+  try {
+    await enableRule(row.id!)
+    ElMessage.success('已启用')
+    loadData()
+  } catch (e: any) {
+    ElMessage.error('启用失败: ' + (e?.message || '未知错误'))
+  }
 }
 
 async function handleDisable(row: ReconRuleConfig) {
-  try { await disableRule(row.id!) } catch {}
-  ElMessage.success('已禁用')
-  loadData()
+  try {
+    await disableRule(row.id!)
+    ElMessage.success('已禁用')
+    loadData()
+  } catch (e: any) {
+    ElMessage.error('禁用失败: ' + (e?.message || '未知错误'))
+  }
 }
 
 function openNLGenerate() {
@@ -369,20 +380,8 @@ async function handleNLGenerate() {
       const result = await generateRuleFromNL(nlForm.description, appStore.currentOrgId)
       nlResult.value = result
     }
-  } catch {
-    if (!nlResult.value) {
-      // Mock生成结果
-      nlResult.value = {
-        ruleName: 'AI生成: ' + nlForm.description.slice(0, 20) + '...',
-        ruleCode: 'AI_GEN_' + Date.now(),
-        ruleType: 'RULE_MATCH',
-        matchConfigJson: '{}',
-        toleranceJson: '{}',
-        explanation: '基于语义分析自动生成的匹配规则配置',
-        estimatedMatchRate: 85,
-        hasConflict: false
-      }
-    }
+  } catch (e: any) {
+    ElMessage.error('AI生成规则失败: ' + (e?.message || '未知错误'))
   }
   nlGenerating.value = false
 }

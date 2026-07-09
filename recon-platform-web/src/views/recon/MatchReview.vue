@@ -172,7 +172,8 @@ async function loadData() {
     const res = await pageMatch(query)
     tableData.value = res.records
     total.value = res.total
-  } catch {
+  } catch (e: any) {
+    ElMessage.error('加载匹配结果失败: ' + (e?.message || '未知错误'))
     tableData.value = []
     total.value = 0
   }
@@ -186,22 +187,28 @@ async function handleConfirm(row: ReconMatch) {
     await confirmMatch(row.id!, 1) // userId from store
     ElMessage.success('已确认匹配')
     loadData()
-  } catch {
-    ElMessage.success('已确认匹配(Mock)')
-    loadData()
+  } catch (e: any) {
+    ElMessage.error('确认匹配失败: ' + (e?.message || '未知错误'))
   }
 }
 
 async function handleReject(row: ReconMatch) {
+  let comment: string | undefined
   try {
-    const { value: comment } = await ElMessageBox.prompt('请输入拒绝原因', '拒绝匹配', {
+    const result = await ElMessageBox.prompt('请输入拒绝原因', '拒绝匹配', {
       confirmButtonText: '确定', cancelButtonText: '取消'
     })
-    await rejectMatch(row.id!, 1, comment || undefined)
+    comment = result.value || undefined
+  } catch {
+    // 用户取消操作
+    return
+  }
+  try {
+    await rejectMatch(row.id!, 1, comment)
     ElMessage.success('已拒绝匹配')
     loadData()
-  } catch {
-    // 取消操作
+  } catch (e: any) {
+    ElMessage.error('拒绝匹配失败: ' + (e?.message || '未知错误'))
   }
 }
 

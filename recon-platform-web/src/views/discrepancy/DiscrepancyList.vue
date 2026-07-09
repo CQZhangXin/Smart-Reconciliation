@@ -248,7 +248,8 @@ async function loadData() {
     const res = await pageDiscrepancy(query)
     tableData.value = res.records
     total.value = res.total
-  } catch {
+  } catch (e: any) {
+    ElMessage.error('加载差异记录失败: ' + (e?.message || '未知错误'))
     tableData.value = []
     total.value = 0
   }
@@ -263,9 +264,8 @@ async function handleClassify(row: ReconDiscrepancy) {
     await classifyDiscrepancy(row.id!)
     ElMessage.success('AI分类完成')
     loadData()
-  } catch {
-    ElMessage.success('AI分类完成(Mock)')
-    loadData()
+  } catch (e: any) {
+    ElMessage.error('AI分类失败: ' + (e?.message || '未知错误'))
   }
 }
 
@@ -274,8 +274,8 @@ async function handleBatchClassify() {
   try {
     await batchClassify(query.orgId!)
     ElMessage.success('批量分类已提交')
-  } catch {
-    ElMessage.success('批量分类已提交(Mock)')
+  } catch (e: any) {
+    ElMessage.error('批量分类失败: ' + (e?.message || '未知错误'))
   }
   classifying.value = false
   loadData()
@@ -291,8 +291,8 @@ async function handleAssignSubmit() {
   try {
     await assignDiscrepancy(currentRow.value.id!, assignForm.handlerId, assignForm.handlerName)
     ElMessage.success('分配成功')
-  } catch {
-    ElMessage.success('分配成功(Mock)')
+  } catch (e: any) {
+    ElMessage.error('分配失败: ' + (e?.message || '未知错误'))
   }
   assignVisible.value = false
   loadData()
@@ -308,8 +308,8 @@ async function handleResolveSubmit() {
   try {
     await resolveDiscrepancy(currentRow.value.id!, { ...resolveForm })
     ElMessage.success('已解决')
-  } catch {
-    ElMessage.success('已解决(Mock)')
+  } catch (e: any) {
+    ElMessage.error('解决失败: ' + (e?.message || '未知错误'))
   }
   resolveVisible.value = false
   loadData()

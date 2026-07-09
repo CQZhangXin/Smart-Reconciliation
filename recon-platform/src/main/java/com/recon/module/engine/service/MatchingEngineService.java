@@ -18,6 +18,7 @@ import com.recon.module.engine.repository.ReconMatchMapper;
 import com.recon.module.engine.repository.ReconTaskMapper;
 import com.recon.module.rule.entity.ReconRuleConfig;
 import com.recon.module.rule.repository.ReconRuleConfigMapper;
+import com.baomidou.mybatisplus.extension.toolkit.Db;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -35,14 +36,13 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * 核心匹配引擎服务 — 实现三层匹配架构
+ * 核心匹配引擎服务 — 实现四层匹配架构
  *
  * <pre>
  * Layer 1: 精准匹配 (amount + ref + date 完全相等)
  * Layer 2: 规则匹配 (容忍度范围)
  * Layer 3: AI语义匹配 (LLM + Embedding)
- *
- * 额外: 1:N 拆单匹配 (子集求和)
+ * Layer 4: 1:N 拆单匹配 (子集求和)
  * </pre>
  */
 @Service
@@ -115,7 +115,8 @@ public class MatchingEngineService {
 
             if (CollUtil.isEmpty(recordsA) || CollUtil.isEmpty(recordsB)) {
                 log.warn("一方或双方无待匹配记录, 任务结束");
-                finishTask(task, 0, recordsA.size() + recordsB.size(), 0);
+                task.setMatchedCount(0);
+                task.setUnmatchedCount(recordsA.size() + recordsB.size());
                 return ReconResult.builder()
                         .unmatchedA(recordsA)
                         .unmatchedB(recordsB)
@@ -165,8 +166,10 @@ public class MatchingEngineService {
 
             int unmatchedCount = recordsA.size() + recordsB.size();
 
-            // 完成任务
-            finishTask(task, totalMatched, unmatchedCount, 0);
+            // 设置任务统计信息（不保存，由调用方统一完成）
+            task.setMatchedCount(totalMatched);
+            task.setUnmatchedCount(unmatchedCount);
+            log.info("匹配引擎统计: totalMatched={}, unmatchedCount={}", totalMatched, unmatchedCount);
 
             long elapsed = System.currentTimeMillis() - startTime;
             log.info("=== 对账任务完成 [{}] 总匹配={}, 未匹配={}, 耗时={}ms ===",
@@ -183,11 +186,8 @@ public class MatchingEngineService {
 
         } catch (Exception e) {
             log.error("对账任务执行失败 taskId={}", taskId, e);
-            task.setStatus("FAILED");
-            task.setErrorMsg(truncate(e.getMessage(), 500));
-            task.setCompletedAt(LocalDateTime.now());
-            reconTaskMapper.updateById(task);
-            throw new BusinessException(ResultCode.RECON_TASK_FAILED, "对账任务执行失败: " + e.getMessage());
+            // 不在此处更新任务状态，由调用方统一处理
+            throw new BusinessException(ResultCode.RECON_TASK_FAILED, "对账任务执行失败，请稍后重试");
         }
     }
 
@@ -257,9 +257,7 @@ public class MatchingEngineService {
 
         // 批量保存匹配
         if (CollUtil.isNotEmpty(matches)) {
-            for (ReconMatch match : matches) {
-                reconMatchMapper.insert(match);
-            }
+            Db.saveBatch(matches);
         }
 
         return matches.size();
@@ -310,6 +308,11 @@ public class MatchingEngineService {
             // 解析容忍度配置
             Map<String, Object> tolerance = parseTolerance(rule.getTolerance());
 
+            // Pre-filter B candidates that are not yet matched
+            List<RawRecord> availableB = recordsB.stream()
+                    .filter(b -> !matchedBIds.contains(b.getId()))
+                    .collect(Collectors.toList());
+
             Iterator<RawRecord> aIter = recordsA.iterator();
             while (aIter.hasNext()) {
                 RawRecord a = aIter.next();
@@ -317,10 +320,7 @@ public class MatchingEngineService {
                 RawRecord bestB = null;
                 double bestScore = 0;
 
-                for (RawRecord b : recordsB) {
-                    if (matchedBIds.contains(b.getId())) {
-                        continue;
-                    }
+                for (RawRecord b : availableB) {
 
                     // 评估所有条件
                     boolean allPassed = true;
@@ -358,6 +358,7 @@ public class MatchingEngineService {
 
                     matches.add(match);
                     matchedBIds.add(bestB.getId());
+                    availableB.remove(bestB);
                     aIter.remove();
                 }
             }
@@ -368,9 +369,7 @@ public class MatchingEngineService {
 
         // 批量保存
         if (CollUtil.isNotEmpty(matches)) {
-            for (ReconMatch match : matches) {
-                reconMatchMapper.insert(match);
-            }
+            Db.saveBatch(matches);
         }
 
         return matches.size();
@@ -466,9 +465,7 @@ public class MatchingEngineService {
 
         // 批量保存
         if (CollUtil.isNotEmpty(matches)) {
-            for (ReconMatch match : matches) {
-                reconMatchMapper.insert(match);
-            }
+            Db.saveBatch(matches);
         }
 
         return matches.size();
@@ -544,9 +541,7 @@ public class MatchingEngineService {
 
         // 批量保存
         if (CollUtil.isNotEmpty(matches)) {
-            for (ReconMatch match : matches) {
-                reconMatchMapper.insert(match);
-            }
+            Db.saveBatch(matches);
         }
 
         return matchedBIds.size();
@@ -724,8 +719,8 @@ public class MatchingEngineService {
                 return evaluateStringField(recordA.getDirection(), recordB.getDirection(), operator);
 
             default:
-                log.debug("未知规则字段: {}, 默认通过", field);
-                return true;
+                log.warn("未知规则字段: {}, 跳过校验", field);
+                return false;
         }
     }
 

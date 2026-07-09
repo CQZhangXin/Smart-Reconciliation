@@ -123,24 +123,8 @@ async function handleQuery() {
   result.value = null
   try {
     result.value = await nlQuery(question.value, appStore.currentOrgId)
-  } catch {
-    result.value = {
-      question: question.value,
-      generatedSql: `SELECT category, COUNT(*) as cnt, SUM(amount_diff) as total_diff
-FROM recon_discrepancy
-WHERE org_id = ${appStore.currentOrgId}
-GROUP BY category
-ORDER BY total_diff DESC`,
-      data: [
-        { category: 'TIME_DIFF', cnt: 320, total_diff: '45000.00' },
-        { category: 'FEE_DIFF', cnt: 210, total_diff: '12500.00' },
-        { category: 'EXCHANGE_DIFF', cnt: 156, total_diff: '8900.00' },
-        { category: 'UNKNOWN', cnt: 98, total_diff: '32000.00' }
-      ],
-      answer: `根据查询结果，共有${856}条差异记录。其中时间差异(TIME_DIFF)占比最多(320条)，其次是手续费差异(FEE_DIFF, 210条)和汇率差异(EXCHANGE_DIFF, 156条)。建议重点关注时间差异类问题。`,
-      extractedEntities: { intent: 'STATS', metric: 'category_distribution' },
-      queryTimeMs: 125
-    }
+  } catch (e: any) {
+    ElMessage.error('查询失败: ' + (e?.message || '未知错误'))
   }
   querying.value = false
 }

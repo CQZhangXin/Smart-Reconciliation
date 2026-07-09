@@ -52,12 +52,12 @@ export function pageMatch(params: PageQuery): Promise<PageResult<ReconMatch>> {
 
 /** 确认匹配 */
 export function confirmMatch(id: number, reviewedBy: number): Promise<ReconMatch> {
-  return put(`/recon/match/${id}/confirm`, null, { params: { reviewedBy } })
+  return put(`/recon/match/${id}/confirm`, { reviewedBy })
 }
 
 /** 拒绝匹配 */
 export function rejectMatch(id: number, reviewedBy: number, comment?: string): Promise<ReconMatch> {
-  return put(`/recon/match/${id}/reject`, null, { params: { reviewedBy, comment } })
+  return put(`/recon/match/${id}/reject`, { reviewedBy, comment })
 }
 
 /** 查询待审核匹配 */

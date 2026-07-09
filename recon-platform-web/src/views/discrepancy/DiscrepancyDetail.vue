@@ -165,15 +165,8 @@ function rootCauseCategoryLabel(cat: string): string {
 async function loadDetail() {
   try {
     discrepancy.value = await getDiscrepancy(id)
-  } catch {
-    // Mock数据
-    discrepancy.value = {
-      id, taskId: 1, recordId: 100, relatedRecordId: 200,
-      side: 'SOURCE_A', amount: 10500.00, amountDiff: 50.00,
-      currency: 'CNY', category: '', riskLevel: 'MEDIUM',
-      handlerId: undefined, handlerName: '', status: 'PENDING',
-      slaDeadline: '2026-07-15 18:00:00'
-    }
+  } catch (e: any) {
+    ElMessage.error('加载差异详情失败: ' + (e?.message || '未知错误'))
   }
 }
 
@@ -182,10 +175,8 @@ async function handleClassify() {
     const result = await classifyDiscrepancy(id)
     discrepancy.value = result
     ElMessage.success(`AI分类完成: ${categoryLabel(result.category!)}`)
-  } catch {
-    ElMessage.success('AI分类完成(Mock): 手续费差异')
-    discrepancy.value.category = 'FEE_DIFF'
-    discrepancy.value.riskLevel = 'LOW'
+  } catch (e: any) {
+    ElMessage.error('AI分类失败: ' + (e?.message || '未知错误'))
   }
 }
 
@@ -203,8 +194,8 @@ async function handleRootCause() {
       tokensUsed: 320
     }
     ElMessage.success('根因分析完成')
-  } catch {
-    ElMessage.success('根因分析完成(Mock)')
+  } catch (e: any) {
+    ElMessage.error('根因分析失败: ' + (e?.message || '未知错误'))
   }
 }
 
