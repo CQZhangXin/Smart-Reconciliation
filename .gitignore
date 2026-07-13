@@ -1,0 +1,69 @@
+# ============================================================================
+# IDE
+# ============================================================================
+.idea/
+.vscode/
+
+# ============================================================================
+# Java / Maven (后端: recon-platform)
+# ============================================================================
+target/
+!.mvn/wrapper/maven-wrapper.jar
+*.class
+*.jar
+*.war
+*.ear
+*.log
+*.ctxt
+.mtj.tmp/
+*.zip
+*.tar.gz
+*.rar
+hs_err_pid*
+replay_pid*
+
+# Maven
+.mvn/
+mvnw
+mvnw.cmd
+mvn25.cmd
+
+# ============================================================================
+# Node.js / Vue (前端: recon-platform-web)
+# ============================================================================
+node_modules/
+dist/
+.env.local
+.env.*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.tsbuildinfo
+
+# Vite
+.vite/
+
+# Auto-generated files
+auto-imports.d.ts
+components.d.ts
+
+# Package lock (optional, uncomment if needed)
+# package-lock.json
+
+# ============================================================================
+# OS
+# ============================================================================
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ============================================================================
+# Misc
+# ============================================================================
+*.tmp
+*.swp
+*.swo
+*~
