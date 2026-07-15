@@ -4,6 +4,10 @@
       <el-button type="primary" @click="openForm()">
         <el-icon><Plus /></el-icon> 新建流程
       </el-button>
+      <el-button type="success" @click="nlPromptVisible = true">
+        <el-icon><MagicStick /></el-icon>
+        智能创建
+      </el-button>
     </div>
 
     <el-card shadow="never">
@@ -74,6 +78,11 @@
         <el-button type="primary" @click="handleSubmit">确定</el-button>
       </template>
     </el-dialog>
+
+    <WorkflowNLPrompt
+      v-model:visible="nlPromptVisible"
+      @success="onNLCreateSuccess"
+    />
   </div>
 </template>
 
@@ -84,13 +93,15 @@ import type { FormInstance } from 'element-plus'
 import { Delete } from '@element-plus/icons-vue'
 import { pageProcessDef, createProcessDef, publishProcessDef } from '@/api/workflow'
 import { useAppStore } from '@/stores/app'
-import type { WfProcessDefinition, ProcessStep } from '@/types'
+import type { WfProcessDefinition, ProcessStep, NLWorkflowParseResult } from '@/types'
+import WorkflowNLPrompt from './WorkflowNLPrompt.vue'
 
 const appStore = useAppStore()
 const loading = ref(false)
 const tableData = ref<WfProcessDefinition[]>([])
 const formVisible = ref(false)
 const formRef = ref<FormInstance>()
+const nlPromptVisible = ref(false)
 
 const rules = {
   processName: [{ required: true, message: '请输入流程名称', trigger: 'blur' }],
@@ -125,6 +136,24 @@ function openForm(row?: WfProcessDefinition) {
   formVisible.value = true
 }
 
+function onNLCreateSuccess(result: NLWorkflowParseResult) {
+  nlPromptVisible.value = false
+  const def = result.definition
+  const steps: ProcessStep[] = (def.steps || []).map((s, i) => ({
+    order: s.order || i + 1,
+    name: s.name || '',
+    approverRole: s.approverRole || ''
+  }))
+  Object.assign(formData, {
+    id: undefined,
+    processName: def.processName || '',
+    processKey: def.processKey || '',
+    description: def.description || '',
+    steps
+  })
+  formVisible.value = true
+}
+
 function addStep() {
   if (!formData.steps) formData.steps = []
   formData.steps.push({ order: formData.steps.length + 1, name: '', approverRole: '' })
@@ -137,6 +166,9 @@ function removeStep(index: number) {
 async function handleSubmit() {
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
+  // TODO: updateProcessDef API is not yet available. Currently always calls createProcessDef even for edits.
+  // When updateProcessDef is implemented in the API layer, add conditional logic:
+  //   if (formData.id) { await updateProcessDef(formData.id, formData) } else { await createProcessDef(formData) }
   try {
     await createProcessDef(formData)
     ElMessage.success('保存成功')

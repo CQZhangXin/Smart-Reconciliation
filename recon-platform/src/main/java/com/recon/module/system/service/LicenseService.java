@@ -46,7 +46,8 @@ public class LicenseService {
     private final SysLicenseMapper licenseMapper;
     private final SysUserMapper sysUserMapper;
 
-    @Value("${license.secret:recon-platform-license-default-secret-key}")
+    /** 许可证密钥 — 无默认值，必须在 application.yml 中配置，否则启动失败 */
+    @Value("${license.secret}")
     private String licenseSecret;
 
     @Value("${license.enabled:true}")
@@ -242,7 +243,14 @@ public class LicenseService {
 
     /**
      * 校验用户数限制
+     *
+     * <p>TODO: 该方法存在 TOCTOU (Time-of-Check-Time-of-Use) 竞态条件风险：
+     * 先查询当前用户数，再判断是否超限，在高并发创建用户场景下，
+     * 多个请求可能同时通过检查从而导致超限。生产环境建议使用
+     * Redis 分布式锁或数据库行级锁（如 SELECT ... FOR UPDATE）
+     * 来保证原子性。</p>
      */
+    @Transactional
     public void checkUserLimit(Long orgId) {
         if (!licenseEnabled) {
             return;

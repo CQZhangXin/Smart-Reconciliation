@@ -86,8 +86,28 @@ public class DiscrepancyService {
     // ==================== AI分类与根因分析 ====================
 
     /**
+     * 对单条差异执行根因分析（独立端点用），返回完整 RootCauseResult
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public RootCauseResult analyzeRootCause(Long discrepancyId) {
+        ReconDiscrepancy discrepancy = getById(discrepancyId);
+        RootCauseRequest rootCauseReq = buildRootCauseRequest(discrepancy, discrepancy.getCategory());
+        RootCauseResult result = aiService.analyzeRootCause(rootCauseReq);
+
+        discrepancy.setAiRootCause(result.getRootCauseCategory());
+        discrepancy.setAiSuggestion(result.getSuggestion());
+        discrepancy.setRiskLevel(result.getRiskLevel());
+        discrepancyMapper.updateById(discrepancy);
+
+        log.info("差异 {} 根因分析完成, 风险等级: {}, 置信度: {}%",
+                discrepancyId, result.getRiskLevel(), result.getConfidence());
+        return result;
+    }
+
+    /**
      * 对单条差异执行AI分类与根因分析
      */
+    @Transactional(rollbackFor = Exception.class)
     public ReconDiscrepancy classifyAndAnalyze(Long discrepancyId) {
         ReconDiscrepancy discrepancy = getById(discrepancyId);
 

@@ -124,7 +124,7 @@
           <!-- 报告预览 -->
           <div v-if="reportContent" class="report-preview">
             <el-divider />
-            <div class="report-md" v-html="renderedReport"></div>
+            <div class="report-md" v-html="safeRenderedReport"></div>
             <el-button type="success" size="small" style="margin-top:12px" @click="handleExportReport">
               导出报告
             </el-button>
@@ -136,7 +136,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import * as echarts from 'echarts'
 import { ElMessage } from 'element-plus'
 import { getTaskHealth, getTrend, comparePeriods, generateReport } from '@/api/analytics'
@@ -152,6 +152,7 @@ const compareItems = ref<Array<{ label: string; current: string; previous: strin
 
 const trendChartRef = ref<HTMLElement>()
 let trendChart: echarts.ECharts | null = null
+let trendResizeObserver: ResizeObserver | null = null
 
 const reportForm = reactive({
   reportType: 'MONTHLY',
@@ -160,6 +161,16 @@ const reportForm = reactive({
 })
 
 const renderedReport = ref('')
+
+/** 安全渲染报告：剥离 script 标签和事件处理器，防止 XSS */
+const safeRenderedReport = computed(() => {
+  if (!renderedReport.value) return ''
+  return renderedReport.value
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/\bon\w+\s*=\s*"[^"]*"/gi, '')
+    .replace(/\bon\w+\s*=\s*'[^']*'/gi, '')
+    .replace(/javascript\s*:/gi, '')
+})
 
 function scoreColor(score?: number): string {
   if (!score) return '#909399'
@@ -275,9 +286,14 @@ onMounted(() => {
   loadHealth()
   loadTrend()
   loadCompare()
+  trendResizeObserver = new ResizeObserver(() => { trendChart?.resize() })
+  if (trendChartRef.value) trendResizeObserver.observe(trendChartRef.value)
 })
 
-onUnmounted(() => { trendChart?.dispose() })
+onUnmounted(() => {
+  trendResizeObserver?.disconnect()
+  trendChart?.dispose()
+})
 </script>
 
 <style scoped>

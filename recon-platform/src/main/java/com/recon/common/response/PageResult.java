@@ -34,6 +34,9 @@ public class PageResult<T> implements Serializable {
      * 从MyBatis-Plus IPage对象构建分页结果
      */
     public static <T> PageResult<T> of(IPage<T> page) {
+        if (page == null) {
+            return empty();
+        }
         return new PageResult<>(
                 page.getTotal(),
                 (int) page.getCurrent(),
@@ -42,7 +45,10 @@ public class PageResult<T> implements Serializable {
         );
     }
 
+    /**
+     * 构建空的分页结果 — size=0 表示无分页数据
+     */
     public static <T> PageResult<T> empty() {
-        return new PageResult<>(0, 1, 10, Collections.emptyList());
+        return new PageResult<>(0, 1, 0, Collections.emptyList());
     }
 }

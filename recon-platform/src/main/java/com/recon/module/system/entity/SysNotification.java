@@ -33,6 +33,11 @@ public class SysNotification implements Serializable {
 
     private String channel;
 
+    /**
+     * 是否已读。约定: 0=未读, 1=已读。
+     * <p>使用 Integer 类型以兼容数据库 TINYINT 字段和 MyBatis-Plus 的默认映射，
+     * 避免 Boolean 类型在某些数据库方言下的类型转换问题。</p>
+     */
     private Integer isRead;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")

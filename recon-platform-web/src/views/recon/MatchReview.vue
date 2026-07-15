@@ -122,9 +122,11 @@ import { reactive, ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { pageMatch, confirmMatch, rejectMatch } from '@/api/recon'
+import { useUserStore } from '@/stores/user'
 import type { ReconMatch } from '@/types'
 
 const route = useRoute()
+const userStore = useUserStore()
 const taskId = Number(route.params.taskId)
 const loading = ref(false)
 const total = ref(0)
@@ -184,7 +186,7 @@ function handleSearch() { query.page = 1; loadData() }
 
 async function handleConfirm(row: ReconMatch) {
   try {
-    await confirmMatch(row.id!, 1) // userId from store
+    await confirmMatch(row.id!, userStore.userInfo?.id ?? 1)
     ElMessage.success('已确认匹配')
     loadData()
   } catch (e: any) {
@@ -204,7 +206,7 @@ async function handleReject(row: ReconMatch) {
     return
   }
   try {
-    await rejectMatch(row.id!, 1, comment)
+    await rejectMatch(row.id!, userStore.userInfo?.id ?? 1, comment)
     ElMessage.success('已拒绝匹配')
     loadData()
   } catch (e: any) {

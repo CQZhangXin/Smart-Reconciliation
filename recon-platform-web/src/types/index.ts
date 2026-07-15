@@ -29,12 +29,12 @@ export interface DataSource {
   id?: number
   ledgerId?: number
   dsName: string
-  dsType: 'ERP' | 'BANK' | 'FILE' | 'API'
+  dsType: string
   dsCategory: string      // SOURCE_A / SOURCE_B
   provider?: string
   connConfig?: Record<string, any>
   fieldMapping?: Record<string, string>
-  syncStrategy?: string   // FULL / INCREMENTAL
+  syncStrategy?: string   // FULL / INCREMENTAL / MANUAL / SCHEDULED
   syncCron?: string
   lastSyncAt?: string
   lastSyncStatus?: string
@@ -116,6 +116,109 @@ export interface ReconTask {
   createdBy?: number
   createdAt?: string
   updatedAt?: string
+}
+
+// ============ 自定义对账 ============
+
+export interface CustomReconDefinition {
+  id?: number
+  orgId?: number
+  ledgerId?: number
+  defName: string
+  defCode: string
+  description?: string
+  sourceAId: number
+  sourceBIds: number[]
+  ruleIds?: number[]
+  matchLayers?: {
+    exact?: boolean
+    rule?: boolean
+    ai?: boolean
+    split?: boolean
+  }
+  periodType?: string
+  defaultPeriod?: string
+  status?: string
+  lastRunTaskId?: number
+  lastRunAt?: string
+  createdBy?: number
+  updatedBy?: number
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface CustomReconValidateResult {
+  valid: boolean
+  errors: string[]
+  warnings: string[]
+  sourceAInfo?: Record<string, any>
+  sourceBInfoList?: Record<string, any>[]
+  activeRuleCount: number
+  pendingRecordA: number
+  pendingRecordB: number
+}
+
+export interface CustomReconRunRequest {
+  reconPeriod?: string
+  periodStart?: string
+  periodEnd?: string
+  async?: boolean
+  ruleIds?: number[]
+  sourceBIds?: number[]
+}
+
+export interface CustomReconRunResult {
+  definitionId: number
+  defName: string
+  primaryTaskId: number
+  taskIds: number[]
+  async: boolean
+  message: string
+}
+
+// ============ 自然语言创建对账方案 ============
+
+/** 自然语言解析请求 */
+export interface NLParseRequest {
+  description: string
+  orgId: number
+}
+
+/** 自然语言解析响应 */
+export interface NLParseResult {
+  definition: CustomReconDefinition
+  unresolvedSources: string[]
+  unresolvedRules: string[]
+  aiExplanation: string
+}
+
+// ============ 自然语言创建流程定义 ============
+
+/** 自然语言解析流程定义请求 */
+export interface NLWorkflowParseRequest {
+  description: string
+}
+
+/** 流程步骤项（AI返回） */
+export interface NLProcessStepItem {
+  order: number
+  name: string
+  approverRole: string
+}
+
+/** 自然语言解析的流程定义 */
+export interface NLProcessDefData {
+  processName: string
+  processKey: string
+  description: string
+  steps: NLProcessStepItem[]
+  aiExplanation: string
+}
+
+/** 自然语言解析流程定义响应 */
+export interface NLWorkflowParseResult {
+  definition: NLProcessDefData
+  warning?: string
 }
 
 // ============ 匹配结果 ============
@@ -346,6 +449,7 @@ export interface SysUser {
   id?: number
   orgId?: number
   username: string
+  /** @deprecated password is only present in request payloads for user creation, never in API responses. */
   password?: string
   realName?: string
   email?: string

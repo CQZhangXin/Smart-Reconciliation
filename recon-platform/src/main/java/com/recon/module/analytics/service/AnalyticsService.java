@@ -36,6 +36,10 @@ public class AnalyticsService {
 
     /**
      * 获取仪表盘综合数据
+     *
+     * <p><b>性能警告 (TODO):</b> 此方法会一次性加载所有差异记录至内存，在大数据量
+     * 场景下可能导致 OOM。建议改为使用 COUNT 聚合查询替代全量加载，
+     * 或在查询层面添加数据量上限。</p>
      */
     public Map<String, Object> getDashboardData(Long orgId) {
         Map<String, Object> dashboard = new LinkedHashMap<>();

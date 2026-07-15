@@ -116,7 +116,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getDiscrepancy, classifyDiscrepancy } from '@/api/discrepancy'
+import { getDiscrepancy, classifyDiscrepancy, getRootCauseAnalysis } from '@/api/discrepancy'
 import type { ReconDiscrepancy, RootCauseResult } from '@/types'
 
 const route = useRoute()
@@ -182,17 +182,7 @@ async function handleClassify() {
 
 async function handleRootCause() {
   try {
-    // 模拟根因分析结果
-    rootCauseResult.value = {
-      rootCauseCategory: discrepancy.value.category || 'UNKNOWN',
-      analysisSteps: 'Step 1: 分析金额差异特征 → 差异金额50.00元，在合理范围内\nStep 2: 检查交易时间 → 时间差在T+1结算周期内\nStep 3: 综合判断 → 差异可能由银行手续费导致',
-      suggestion: '建议核实银行手续费标准，与银行对账单中的手续费明细进行核对。如确认是手续费差异，可创建调整分录平账。',
-      riskLevel: 'LOW',
-      suggestedAdjustment: '借: 财务费用-手续费 50.00\n贷: 银行存款 50.00',
-      confidence: 85,
-      modelUsed: 'gpt-4o',
-      tokensUsed: 320
-    }
+    rootCauseResult.value = await getRootCauseAnalysis(id)
     ElMessage.success('根因分析完成')
   } catch (e: any) {
     ElMessage.error('根因分析失败: ' + (e?.message || '未知错误'))

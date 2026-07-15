@@ -58,4 +58,18 @@ public class SecurityUtil {
         }
         return null;
     }
+
+    /**
+     * 检查当前用户是否拥有指定角色。
+     * 注意：当前 JWT Filter 创建 Token 时 authorities 为空，
+     * TODO: 修复 JWT Filter 从 token claims 或数据库加载角色后，此方法才能生效。
+     */
+    public static boolean hasRole(String role) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return false;
+        }
+        return authentication.getAuthorities().stream()
+                .anyMatch(a -> role.equals(a.getAuthority()));
+    }
 }

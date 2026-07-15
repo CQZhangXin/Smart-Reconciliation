@@ -3,6 +3,9 @@ package com.recon.common.exception;
 import com.recon.common.enums.ResultCode;
 import com.recon.common.response.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
+
+import java.util.UUID;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -39,7 +42,10 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ApiResponse<Void> handleException(Exception e) {
-        log.error("系统异常: ", e);
-        return ApiResponse.error(ResultCode.INTERNAL_ERROR.getCode(), "服务器内部错误");
+        String traceId = MDC.get("traceId") != null ? MDC.get("traceId") : UUID.randomUUID().toString();
+        log.error("系统异常 [traceId={}]: ", traceId, e);
+        ApiResponse<Void> response = ApiResponse.error(ResultCode.INTERNAL_ERROR.getCode(), "服务器内部错误");
+        response.setTraceId(traceId);
+        return response;
     }
 }

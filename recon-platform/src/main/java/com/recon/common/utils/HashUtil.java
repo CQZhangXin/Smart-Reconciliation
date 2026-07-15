@@ -28,9 +28,13 @@ public class HashUtil {
     /**
      * MD5哈希
      *
-     * @param input 输入字符串
+     * @param input  输入字符串
      * @return 十六进制哈希字符串
+     * @deprecated MD5 已被证实存在碰撞漏洞，不应用于安全场景 (如密码哈希、数字签名)。
+     *             对于新代码请使用 {@link #sha256(String)} 或更强的算法,
+     *             仅在非安全用途 (如简单校验和) 中可继续使用。
      */
+    @Deprecated
     public static String md5(String input) {
         return hash(input, "MD5");
     }

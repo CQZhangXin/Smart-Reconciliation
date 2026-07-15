@@ -6,18 +6,16 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.annotation.EnableKafka;
 
 /**
- * Kafka 配置 — 仅在配置启用时激活
+ * Kafka 配置 — 仅在显式启用时激活
  *
- * 若本地无 Kafka 环境，设置 spring.kafka.enabled=false 或移除依赖
+ * <p>默认 {@code spring.kafka.enabled=false}，本地无 Kafka 也可正常启动业务。
+ * 需要消息队列时设置 {@code spring.kafka.enabled=true} 并保证 bootstrap-servers 可达。</p>
  */
 @Slf4j
 @Configuration
 @EnableKafka
-@ConditionalOnProperty(name = "spring.kafka.enabled", havingValue = "true", matchIfMissing = false)
+@ConditionalOnProperty(name = "spring.kafka.enabled", havingValue = "true")
 public class KafkaConfig {
-
-    // Kafka 消费者/生产者配置由 spring.kafka.* 自动装配
-    // 此处仅用于条件启用
 
     static {
         log.info("Kafka 消息队列已启用");

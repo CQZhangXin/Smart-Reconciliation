@@ -59,7 +59,7 @@
             <div class="stat-info">
               <div class="stat-label">差异解决率</div>
               <div class="stat-value">
-                {{ calcResolveRate() }}%
+                {{ resolveRate }}%
               </div>
               <div class="stat-sub">
                 已解决: {{ dashboardData?.discrepancyStats?.resolved || 0 }}
@@ -145,7 +145,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import * as echarts from 'echarts'
 import { getDashboard, getTrend } from '@/api/analytics'
 import { useAppStore } from '@/stores/app'
@@ -160,12 +160,14 @@ const trendChartRef = ref<HTMLElement>()
 const categoryChartRef = ref<HTMLElement>()
 let trendChart: echarts.ECharts | null = null
 let categoryChart: echarts.ECharts | null = null
+let trendResizeObserver: ResizeObserver | null = null
+let categoryResizeObserver: ResizeObserver | null = null
 
-function calcResolveRate(): string {
+const resolveRate = computed(() => {
   const stats = dashboardData.value?.discrepancyStats
   if (!stats || stats.total === 0) return '0.0'
   return ((stats.resolved / stats.total) * 100).toFixed(1)
-}
+})
 
 function taskTypeLabel(type: string): string {
   const map: Record<string, string> = { BANK: '银行', THIRD_PAYMENT: '第三方', AR: '应收', AP: '应付', CROSS_SYSTEM: '跨系统', INTERCOMPANY: '内部往来' }
@@ -189,6 +191,8 @@ function statusLabel(status: string): string {
 
 function initTrendChart() {
   if (!trendChartRef.value) return
+  const existingInstance = echarts.getInstanceByDom(trendChartRef.value)
+  if (existingInstance) existingInstance.dispose()
   trendChart = echarts.init(trendChartRef.value)
   const hasData = trendData.value.length > 0
 
@@ -295,9 +299,15 @@ async function loadTrendData() {
 onMounted(async () => {
   await loadDashboard()
   await loadTrendData()
+  trendResizeObserver = new ResizeObserver(() => { trendChart?.resize() })
+  categoryResizeObserver = new ResizeObserver(() => { categoryChart?.resize() })
+  if (trendChartRef.value) trendResizeObserver.observe(trendChartRef.value)
+  if (categoryChartRef.value) categoryResizeObserver.observe(categoryChartRef.value)
 })
 
 onUnmounted(() => {
+  trendResizeObserver?.disconnect()
+  categoryResizeObserver?.disconnect()
   trendChart?.dispose()
   categoryChart?.dispose()
 })

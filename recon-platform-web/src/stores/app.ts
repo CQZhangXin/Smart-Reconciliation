@@ -12,6 +12,7 @@ export const useAppStore = defineStore('app', () => {
 
   function setOrgId(orgId: number) {
     currentOrgId.value = orgId
+    localStorage.setItem('currentOrgId', String(orgId))
   }
 
   function setCurrentOrgId(orgId: number) {

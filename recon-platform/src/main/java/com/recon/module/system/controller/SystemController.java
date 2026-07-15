@@ -121,6 +121,22 @@ public class SystemController {
         return ApiResponse.success(created);
     }
 
+    @Operation(summary = "更新角色")
+    @PutMapping("/role/{id}")
+    public ApiResponse<SysRole> updateRole(@PathVariable Long id, @RequestBody SysRole role) {
+        log.info("更新角色: id={}", id);
+        SysRole updated = systemService.updateRole(id, role);
+        return ApiResponse.success(updated);
+    }
+
+    @Operation(summary = "删除角色")
+    @DeleteMapping("/role/{id}")
+    public ApiResponse<Void> deleteRole(@PathVariable Long id) {
+        log.info("删除角色: id={}", id);
+        systemService.deleteRole(id);
+        return ApiResponse.success();
+    }
+
     @Operation(summary = "为角色分配权限")
     @PutMapping("/role/{id}/permissions")
     public ApiResponse<Void> assignRolePermissions(@PathVariable Long id, @RequestBody List<Long> permIds) {
@@ -178,6 +194,22 @@ public class SystemController {
         log.info("创建组织: orgName={}", org.getOrgName());
         OrgOrganization created = systemService.createOrg(org);
         return ApiResponse.success(created);
+    }
+
+    @Operation(summary = "更新组织")
+    @PutMapping("/org/{id}")
+    public ApiResponse<OrgOrganization> updateOrg(@PathVariable Long id, @RequestBody OrgOrganization org) {
+        log.info("更新组织: id={}", id);
+        OrgOrganization updated = systemService.updateOrg(id, org);
+        return ApiResponse.success(updated);
+    }
+
+    @Operation(summary = "删除组织")
+    @DeleteMapping("/org/{id}")
+    public ApiResponse<Void> deleteOrg(@PathVariable Long id) {
+        log.info("删除组织: id={}", id);
+        systemService.deleteOrg(id);
+        return ApiResponse.success();
     }
 
     // ========== 账户管理 ==========

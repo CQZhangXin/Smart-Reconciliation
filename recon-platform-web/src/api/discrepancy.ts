@@ -30,7 +30,7 @@ export function batchClassify(ids: number[]): Promise<void> {
 
 /** 分配处理人 */
 export function assignDiscrepancy(id: number, handlerId: number, handlerName: string): Promise<ReconDiscrepancy> {
-  return put(`/discrepancy/${id}/assign`, null, { params: { handlerId, handlerName } })
+  return put(`/discrepancy/${id}/assign`, { handlerId, handlerName })
 }
 
 /** 解决差异 */
@@ -40,12 +40,12 @@ export function resolveDiscrepancy(id: number, body: Record<string, any>): Promi
 
 /** 关闭差异 */
 export function closeDiscrepancy(id: number, resolvedBy: number): Promise<ReconDiscrepancy> {
-  return put(`/discrepancy/${id}/close`, null, { params: { resolvedBy } })
+  return put(`/discrepancy/${id}/close`, { resolvedBy })
 }
 
 /** 查询SLA超期差异 */
-export function getSlaOverdue(): Promise<ReconDiscrepancy[]> {
-  return get('/discrepancy/sla-overdue')
+export function getSlaOverdue(orgId: number): Promise<ReconDiscrepancy[]> {
+  return get('/discrepancy/sla-overdue', { orgId })
 }
 
 /** 查询差异统计 */
@@ -67,5 +67,5 @@ export function createAdjustment(data: ReconAdjustment): Promise<ReconAdjustment
 
 /** 审批调整 */
 export function approveAdjustment(id: number, approvedBy: number): Promise<ReconAdjustment> {
-  return put(`/discrepancy/adjustment/${id}/approve`, null, { params: { approvedBy } })
+  return put(`/discrepancy/adjustment/${id}/approve`, { approvedBy })
 }

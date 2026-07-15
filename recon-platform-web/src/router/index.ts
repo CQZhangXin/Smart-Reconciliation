@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
+import { useUserStore } from '@/stores/user'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -32,6 +33,25 @@ const routes: RouteRecordRaw[] = [
         name: 'Rule',
         component: () => import('@/views/rule/RuleList.vue'),
         meta: { title: '规则引擎', icon: 'SetUp', permission: 'rule:view' }
+      },
+      // 自定义对账
+      {
+        path: 'custom-recon',
+        name: 'CustomRecon',
+        component: () => import('@/views/custom/CustomReconList.vue'),
+        meta: { title: '自定义对账', icon: 'Operation', permission: 'custom-recon:view' }
+      },
+      {
+        path: 'custom-recon/wizard',
+        name: 'CustomReconWizard',
+        component: () => import('@/views/custom/CustomReconWizard.vue'),
+        meta: { title: '配置对账方案', icon: 'Operation', permission: 'custom-recon:view' }
+      },
+      {
+        path: 'custom-recon/wizard/:id',
+        name: 'CustomReconEdit',
+        component: () => import('@/views/custom/CustomReconWizard.vue'),
+        meta: { title: '编辑对账方案', icon: 'Operation', permission: 'custom-recon:view' }
       },
       // 对账工作台
       {
@@ -111,6 +131,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '许可证管理', icon: 'Key', permission: 'system:license' }
       },
       {
+        path: 'system/ai',
+        name: 'AiModelConfig',
+        component: () => import('@/views/system/AiModelConfig.vue'),
+        meta: { title: '大模型配置', icon: 'Cpu', permission: 'system:ai' }
+      },
+      {
         path: 'system/audit-log',
         name: 'AuditLog',
         component: () => import('@/views/system/AuditLog.vue'),
@@ -139,14 +165,21 @@ const router = createRouter({
 
 // 路由守卫
 router.beforeEach((to, _from, next) => {
-  const token = localStorage.getItem('token')
+  const userStore = useUserStore()
+
+  // 已登录用户访问登录页 → 跳转仪表盘
+  if (to.path === '/login' && userStore.isLoggedIn) {
+    next('/dashboard')
+    return
+  }
+
   // 无需认证的页面直接放行
   if (to.meta.noAuth) {
     next()
     return
   }
   // 未登录 → 跳转登录页
-  if (!token) {
+  if (!userStore.isLoggedIn) {
     next('/login')
     return
   }
@@ -158,11 +191,12 @@ router.beforeEach((to, _from, next) => {
   // 权限校验：meta.permission存在时需要检查用户权限
   const requiredPermission = to.meta.permission as string | undefined
   if (requiredPermission) {
-    // 权限检查逻辑可根据实际权限数据调整
-    // 此处保留占位，实际可结合store中的用户权限列表校验
-    // const userStore = useUserStore()
-    // const hasPermission = userStore.permissions?.includes(requiredPermission)
-    // if (!hasPermission) next('/403')
+    const userInfo = userStore.userInfo as any
+    const permissions = userInfo?.permissions as string[] | undefined
+    if (permissions && permissions.length > 0 && !permissions.includes(requiredPermission)) {
+      next('/403')
+      return
+    }
   }
 
   next()

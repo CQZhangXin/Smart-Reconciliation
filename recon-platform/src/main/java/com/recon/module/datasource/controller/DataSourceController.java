@@ -70,6 +70,13 @@ public class DataSourceController {
         return ApiResponse.success();
     }
 
+    @Operation(summary = "获取数据源字段映射建议")
+    @GetMapping("/{id}/field-mapping")
+    public ApiResponse<Map<String, Object>> getFieldMapping(@PathVariable Long id) {
+        log.info("获取字段映射: sourceId={}", id);
+        return ApiResponse.success(dataSourceService.getFieldMapping(id));
+    }
+
     @Operation(summary = "测试数据源连接")
     @PostMapping("/{id}/test-connection")
     public ApiResponse<Boolean> testConnection(@PathVariable Long id) {

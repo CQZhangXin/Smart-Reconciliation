@@ -60,13 +60,15 @@
 import { reactive, ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { pageMyApprovals, approve } from '@/api/workflow'
+import { useUserStore } from '@/stores/user'
 import type { WfApprovalRecord } from '@/types'
 
+const userStore = useUserStore()
 const loading = ref(false)
 const total = ref(0)
 const tableData = ref<WfApprovalRecord[]>([])
 
-const query = reactive({ page: 1, size: 20, approverId: 1, status: '' })
+const query = reactive({ page: 1, size: 20, approverId: userStore.userInfo?.id || 0, status: '' })
 
 function bizTypeLabel(type: string): string {
   const map: Record<string, string> = { DISCREPANCY: '差异', ADJUSTMENT: '调整', EXPORT: '导出' }
@@ -104,7 +106,7 @@ async function handleAction(row: WfApprovalRecord, action: string) {
   }
   try {
     await approve(row.id!, {
-      approverId: 1, approverName: '当前用户',
+      approverId: userStore.userInfo?.id || 0, approverName: userStore.realName || '当前用户',
       action, comment: comment || ''
     })
     ElMessage.success(action === 'APPROVE' ? '已通过' : '已拒绝')

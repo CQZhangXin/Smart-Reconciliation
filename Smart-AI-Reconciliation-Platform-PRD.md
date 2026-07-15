@@ -1,7 +1,9 @@
 # Smart AI Reconciliation Platform — Product Requirements Document (PRD)
 
-> **Version:** v1.3 | **Date:** 2026-07-07 | **Author:** AI Reconciliation Product Team
+> **Version:** v1.5 | **Date:** 2026-07-13 | **Author:** AI Reconciliation Product Team
 >
+> **v1.5 Update:** Added NL-based Custom Reconciliation creation — describe requirements in natural language and AI auto-generates the reconciliation plan
+> **v1.4 Update:** Added Custom Reconciliation module; domestic LLM providers (DeepSeek / Qwen / Kimi)
 > **v1.3 Update:** Added predictive model vs LLM layered architecture design
 > **v1.2 Update:** Added industry pain point data (10 global research studies)
 >
@@ -188,6 +190,12 @@ Smart AI Reconciliation Platform
 │   ├── 2.2 Visual Rule Orchestration
 │   ├── 2.3 Natural Language Rule Generation (AI)
 │   └── 2.4 Rule Recommendation & Optimization (AI)
+├── 2.5 Custom Reconciliation (New)
+│   ├── 2.5.1 Scenario Definition
+│   ├── 2.5.2 Multi-Source Composition
+│   ├── 2.5.3 Rule Binding & Match Layers
+│   ├── 2.5.4 Pre-flight Validation & One-click Run
+│   └── 2.5.5 Wizard UX & Result Handoff
 ├── 3. Smart Matching Engine
 │   ├── 3.1 Exact Matching (Amount + Date + Ref No.)
 │   ├── 3.2 Fuzzy Matching (AI Semantic Matching)
@@ -217,7 +225,8 @@ Smart AI Reconciliation Platform
 │   ├── 8.1 Multi-Org / Multi-Ledger
 │   ├── 8.2 Role-Based Access Control (RBAC)
 │   ├── 8.3 Audit Log (Immutable)
-│   └── 8.4 Internationalization (Multi-Currency / Multi-Language / Multi-Timezone)
+│   ├── 8.4 Internationalization (Multi-Currency / Multi-Language / Multi-Timezone)
+│   └── 8.5 LLM Provider Configuration (Domestic Models)
 └── 9. Open Platform
     ├── 9.1 RESTful API
     ├── 9.2 Webhook Event Push
@@ -381,6 +390,67 @@ Generated Rule (Structured):
   - "Relaxing date tolerance from 1 to 2 days would auto-match 87% of these unmatched records"
   - "Records with brand names in descriptions — suggest adding supplier name matching rule"
 - Continuous rule performance monitoring → suggest optimization/deprecation of low-efficiency rules
+
+---
+
+#### Module 2.5: Custom Reconciliation (New)
+
+Enables users to compose non-standard reconciliation scenarios by freely combining data sources and rules into reusable definitions, then run them with one click.
+
+##### 2.5.1 Scenario Definition
+
+| Field | Description |
+|------|-------------|
+| Name / Code | Org-unique code for reuse and audit |
+| Period Type | Daily / Monthly / Custom |
+| Default Period | e.g. `2026-07`, overridable at run time |
+| Status | Draft / Active / Inactive |
+
+##### 2.5.2 Multi-Source Composition
+
+- **Primary source A**: one (typically ERP / own ledger)
+- **Counterparty sources B**: multi-select
+- Source types include but are not limited to: Bank API, HTTP API, third-party payment, ERP, file import, database, manual entry
+- Multi-B run: create one `CUSTOM` task per B source (A vs Bᵢ)
+
+##### 2.5.3 Rule Binding & Match Layers
+
+- Optional explicit `ruleIds`; if empty, use all org active rules
+- Matching engine filters by task `ruleIds`
+- Toggle layers: exact / rule / AI semantic / split
+
+##### 2.5.4 Pre-flight Validation & One-click Run
+
+Validate source health, pending record counts, and rule status; then sync/async execute with optional period override.
+
+##### 2.5.5 Wizard UX & Result Handoff
+
+Four-step wizard → match review / discrepancy center reuse existing flows.
+
+##### 2.5.6 Natural Language Creation (AI-Powered)
+
+Users can skip the manual wizard by describing reconciliation needs in natural language. AI parses the description and generates a pre-filled plan:
+
+| Capability | Description |
+|------------|-------------|
+| NL Input | e.g. "Reconcile ICBC bank statements against SAP data, exact match on amount, 1-day date tolerance" |
+| AI Parsing | LLM converts NL into structured plan (name, A/B sources, rules, period, match layers) |
+| Name-to-ID Resolution | Backend fuzzy-matches AI-returned source/rule names to actual database IDs |
+| Wizard Pre-fill | Parsed result pre-populates the 4-step wizard for user review and save |
+| Unresolved Warnings | Sources/rules that cannot be matched are flagged for manual selection |
+
+**Flow:** NL Input → `POST /nl-parse` → AI parsing → name→ID resolution → wizard pre-fill via sessionStorage → user confirms/saves
+
+**API:** `POST /api/v1/custom-recon/definition/nl-parse`
+- Request: `{ "description": "...", "orgId": 1 }`
+- Response: `{ definition: {...}, unresolvedSources: [], unresolvedRules: [], aiExplanation: "..." }`
+
+**Fuzzy Matching (3-step fallback):**
+1. Exact match (case-insensitive, whitespace-insensitive)
+2. Substring containment
+3. Chinese keyword matching (≥2 keywords hit)
+
+API prefix: `/api/v1/custom-recon/definition`
 
 ---
 
@@ -711,6 +781,22 @@ AI: "Q1 vs Q2 Reconciliation Efficiency Comparison:
 - Multi-timezone: Unified timezone display for global branches
 - Multi-GAAP: CAS/IFRS/GAAP difference handling
 
+##### 8.5 LLM Provider Configuration (Domestic Models)
+
+AI capabilities are abstracted behind `AIService` and speak the **OpenAI-compatible** Chat Completions protocol, so ops can switch providers without code changes.
+
+| Provider | `ai.llm.provider` | Default Base URL | Typical Models | API Key Env |
+|----------|-------------------|------------------|----------------|-------------|
+| Local Mock | `mock` | — | mock-ai-v1.0 | none |
+| DeepSeek | `deepseek` | `https://api.deepseek.com/v1` | deepseek-chat / deepseek-reasoner | `DEEPSEEK_API_KEY` |
+| Qwen (Tongyi) | `qwen` | `https://dashscope.aliyuncs.com/compatible-mode/v1` | qwen-turbo / qwen-plus / qwen-max | `DASHSCOPE_API_KEY` |
+| Kimi (Moonshot) | `kimi` | `https://api.moonshot.cn/v1` | moonshot-v1-8k / moonshot-v1-32k | `MOONSHOT_API_KEY` |
+| OpenAI | `openai` | `https://api.openai.com/v1` | gpt-4o / gpt-4o-mini | `OPENAI_API_KEY` |
+| Custom gateway | `custom` | user-defined | user-defined | `AI_CUSTOM_API_KEY` |
+
+**APIs:** `GET /api/v1/ai/config`, `GET /api/v1/ai/providers`, `POST /api/v1/ai/test`  
+Admin UI: System → LLM Configuration (status + connectivity test). Restart required after provider switch.
+
 ---
 
 #### Module 9: Open Platform
@@ -811,16 +897,18 @@ Before diving into the AI capability matrix, a key architectural decision must b
 
 ### 4.2 AI Model Selection Recommendations
 
-| Scenario | Recommended Model | Rationale |
-|----------|------------------|-----------|
-| **Field Semantic Mapping** | Claude Sonnet / GPT-4o mini | High-precision text understanding, manageable cost |
-| **Semantic Match Scoring** | Local Embedding (BGE-M3) + Claude Sonnet | Embedding for coarse ranking, LLM for fine ranking |
-| **NL Rule Parsing** | Claude Sonnet / GPT-4o | Requires strict structured output |
-| **Root Cause Analysis (CoT)** | Claude Opus / GPT-4o | Requires deep reasoning chains |
-| **Natural Language Query** | Claude Sonnet + Text-to-SQL | Balance accuracy and latency |
-| **Discrepancy Classification** | Fine-tuned small models (Qwen/DeepSeek) | High-frequency calls, need low cost & low latency |
-| **Anomaly Detection** | Statistical models (Prophet/Isolation Forest) | Numerical analysis outperforms LLMs |
-| **Report Generation** | Claude Haiku / GPT-4o mini | Structured text generation |
+| Scenario | Recommended (China-first) | Alternative | Rationale |
+|----------|---------------------------|-------------|-----------|
+| **Field Semantic Mapping** | Qwen-Turbo / DeepSeek-Chat | GPT-4o mini | High-precision text understanding, manageable cost |
+| **Semantic Match Scoring** | Local Embedding (BGE-M3) + DeepSeek-Reasoner / Qwen-Max | Claude Sonnet | Embedding for coarse ranking, LLM for fine ranking |
+| **NL Rule Parsing** | Qwen-Plus / DeepSeek-Chat | Claude Sonnet / GPT-4o | Requires strict structured output |
+| **Root Cause Analysis (CoT)** | DeepSeek-Reasoner / Qwen-Max / Kimi-32k | Claude Opus / GPT-4o | Requires deep reasoning chains |
+| **Natural Language Query** | Qwen-Plus / DeepSeek-Chat | Claude Sonnet + Text-to-SQL | Balance accuracy and latency |
+| **Discrepancy Classification** | Qwen-Turbo / DeepSeek-Chat | Fine-tuned small models | High-frequency calls, need low cost & low latency |
+| **Anomaly Detection** | Statistical models (Prophet/Isolation Forest) | — | Numerical analysis outperforms LLMs |
+| **Report Generation** | Qwen-Plus / Moonshot-v1-8k | GPT-4o mini | Structured Chinese/English text generation |
+
+> **Deployment note:** Default `ai.llm.provider=mock`. Prefer DeepSeek / Qwen / Kimi for Chinese scenarios and compliance; use `custom` for private OpenAI-compatible gateways.
 
 ### 4.3 AI Reliability & Safety
 
@@ -1088,10 +1176,12 @@ Scope:
 ✅ Data Source Management: Excel/CSV import + Host-to-host banking (2 banks)
 ✅ Smart Field Mapping (AI-powered)
 ✅ Reconciliation Rule Engine: Pre-built templates + Visual orchestration
+✅ Custom Reconciliation: multi-source composition + rule binding + pre-flight run
 ✅ Smart Matching Engine: Exact match + Rule match + AI semantic match
 ✅ Discrepancy Management: AI auto-classification + Root cause analysis
   + Resolution suggestions
 ✅ Basic Workbench: Manual adjustments + Batch operations
+✅ LLM providers: Mock + DeepSeek / Qwen / Kimi (OpenAI-compatible)
 ✅ Result Export: Excel/PDF
 
 Not Included:

@@ -87,10 +87,15 @@ public class AuthController {
 
     @Operation(summary = "刷新令牌")
     @PostMapping("/refresh")
-    public ApiResponse<Map<String, Object>> refresh(@RequestBody Map<String, String> body) {
+    public ApiResponse<Map<String, String>> refresh(@RequestBody Map<String, String> body) {
         String refreshToken = body.get("refreshToken");
         if (refreshToken == null || !jwtUtil.validateToken(refreshToken)) {
-            return ApiResponse.unauthorized("token已过期");
+            return ApiResponse.unauthorized("token无效或已过期");
+        }
+
+        // 拒绝访问令牌冒充刷新令牌
+        if (!jwtUtil.isRefreshToken(refreshToken)) {
+            return ApiResponse.unauthorized("仅允许刷新令牌进行刷新操作");
         }
 
         Long userId = jwtUtil.getUserIdFromToken(refreshToken);
@@ -99,7 +104,7 @@ public class AuthController {
 
         String newAccessToken = jwtUtil.generateToken(userId, username, orgId);
 
-        Map<String, Object> result = new HashMap<>();
+        Map<String, String> result = new HashMap<>();
         result.put("accessToken", newAccessToken);
         log.info("刷新令牌成功: userId={}", userId);
         return ApiResponse.success(result);
@@ -126,7 +131,7 @@ public class AuthController {
         List<SysPermission> permissions = systemService.getUserPermissions(userId);
 
         Map<String, Object> result = new HashMap<>();
-        result.put("userId", user.getId());
+        result.put("id", user.getId());
         result.put("username", user.getUsername());
         result.put("realName", user.getRealName());
         result.put("email", user.getEmail());

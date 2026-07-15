@@ -200,21 +200,21 @@ async function handleSubmit() {
   try {
     await createAdjustment(formData)
     ElMessage.success('创建成功')
-  } catch {
-    ElMessage.success('创建成功(Mock)')
+    formVisible.value = false
+    loadData()
+  } catch (e: any) {
+    ElMessage.error('创建失败: ' + (e?.message || '未知错误'))
   }
-  formVisible.value = false
-  loadData()
 }
 
 async function handleApprove(row: ReconAdjustment) {
   try {
     await approveAdjustment(row.id!, 1)
     ElMessage.success('已审批通过')
-  } catch {
-    ElMessage.success('已审批通过(Mock)')
+    loadData()
+  } catch (e: any) {
+    ElMessage.error('审批失败: ' + (e?.message || '未知错误'))
   }
-  loadData()
 }
 
 function handleDelete(row: ReconAdjustment) {

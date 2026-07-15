@@ -28,6 +28,16 @@ public class RedisConfig {
         // JSON 序列化器
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
+
+        /*
+         * TODO 安全风险: activateDefaultTyping 配合 LaissezFaireSubTypeValidator
+         * 存在 Jackson 反序列化漏洞 (CVE-2019-12384 等)。LaissezFaireSubTypeValidator
+         * 允许反序列化任意类型，攻击者可能通过构造恶意 JSON 实现 RCE。
+         *
+         * 建议改为:
+         *   - BasicPolymorphicTypeValidator: 限制可反序列化的类型白名单
+         *   - 或完全移除 activateDefaultTyping，改为显式指定序列化目标类型
+         */
         objectMapper.activateDefaultTyping(LaissezFaireSubTypeValidator.instance,
                 ObjectMapper.DefaultTyping.NON_FINAL);
         objectMapper.registerModule(new JavaTimeModule());

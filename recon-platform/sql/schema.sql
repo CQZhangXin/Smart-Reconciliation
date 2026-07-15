@@ -17,6 +17,7 @@ USE recon_platform;
 -- 组织/公司
 CREATE TABLE org_organization (
     id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    org_id          BIGINT        COMMENT '组织ID（租户隔离）',
     parent_id       BIGINT        DEFAULT 0 COMMENT '上级组织ID',
     org_name        VARCHAR(200)  NOT NULL COMMENT '组织名称',
     org_code        VARCHAR(50)   NOT NULL COMMENT '组织编码',
@@ -82,7 +83,7 @@ CREATE TABLE datasource (
     org_id          BIGINT        NOT NULL COMMENT '组织ID',
     ledger_id       BIGINT        COMMENT '账套ID',
     ds_name         VARCHAR(200)  NOT NULL COMMENT '数据源名称',
-    ds_type         VARCHAR(30)   NOT NULL COMMENT '类型: BANK_API/THIRD_PAYMENT/ERP/FILE_IMPORT/MANUAL',
+    ds_type         VARCHAR(30)   NOT NULL COMMENT '类型: BANK_API/THIRD_PAYMENT/ERP/FILE_IMPORT/DATABASE/HTTP_API/MANUAL',
     ds_category     VARCHAR(20)   DEFAULT 'SOURCE_A' COMMENT '来源方: SOURCE_A/SOURCE_B',
     provider        VARCHAR(100)  COMMENT '提供商(工行/支付宝/SAP等)',
     conn_config     JSON          COMMENT '连接配置(加密存储)',
@@ -203,6 +204,37 @@ CREATE TABLE recon_rule_exec_log (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='规则执行日志表';
 
 -- ============================================================================
+-- 3.1 自定义对账方案
+-- ============================================================================
+
+-- 自定义对账定义（用户可配置多数据源、接口与规则组合）
+CREATE TABLE custom_recon_definition (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    org_id          BIGINT        NOT NULL COMMENT '组织ID',
+    ledger_id       BIGINT        COMMENT '账套ID',
+    def_name        VARCHAR(200)  NOT NULL COMMENT '方案名称',
+    def_code        VARCHAR(50)   NOT NULL COMMENT '方案编码',
+    description     TEXT          COMMENT '方案描述',
+    source_a_id     BIGINT        NOT NULL COMMENT '主数据源A',
+    source_b_ids    JSON          NOT NULL COMMENT '对账方数据源ID列表(支持多源)',
+    rule_ids        JSON          COMMENT '选用规则ID列表',
+    match_layers    JSON          COMMENT '启用匹配层: {exact,rule,ai,split}',
+    period_type     VARCHAR(20)   DEFAULT 'MONTHLY' COMMENT '期间类型: DAILY/MONTHLY/CUSTOM',
+    default_period  VARCHAR(20)   COMMENT '默认对账期间',
+    status          VARCHAR(20)   DEFAULT 'DRAFT' COMMENT 'DRAFT/ACTIVE/INACTIVE',
+    last_run_task_id BIGINT       COMMENT '最近一次运行任务ID',
+    last_run_at     DATETIME      COMMENT '最近运行时间',
+    created_by      BIGINT,
+    updated_by      BIGINT,
+    created_at      DATETIME      DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME      DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted         TINYINT       DEFAULT 0,
+    INDEX idx_org_id (org_id),
+    INDEX idx_status (status),
+    UNIQUE KEY uk_def_code (org_id, def_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='自定义对账方案定义表';
+
+-- ============================================================================
 -- 4. 对账任务与匹配结果
 -- ============================================================================
 
@@ -212,7 +244,7 @@ CREATE TABLE recon_task (
     org_id          BIGINT        NOT NULL COMMENT '组织ID',
     ledger_id       BIGINT        COMMENT '账套ID',
     task_name       VARCHAR(200)  NOT NULL COMMENT '任务名称',
-    task_type       VARCHAR(30)   COMMENT '类型: BANK/THIRD_PAYMENT/AR/AP/CROSS_SYSTEM/INTERCOMPANY',
+    task_type       VARCHAR(30)   COMMENT '类型: BANK/THIRD_PAYMENT/AR/AP/CROSS_SYSTEM/INTERCOMPANY/CUSTOM',
     source_a_id     BIGINT        NOT NULL COMMENT '数据源A',
     source_b_id     BIGINT        NOT NULL COMMENT '数据源B',
     rule_ids        JSON          COMMENT '关联规则ID列表',
@@ -233,6 +265,10 @@ CREATE TABLE recon_task (
     completed_at    DATETIME,
     duration_ms     BIGINT,
     created_by      BIGINT,
+    updated_by      BIGINT        COMMENT '更新人',
+    scheduled_at    DATETIME      COMMENT '计划执行时间',
+    retry_count     INT           DEFAULT 0 COMMENT '重试次数',
+    parent_task_id  BIGINT        COMMENT '父任务ID',
     created_at      DATETIME      DEFAULT CURRENT_TIMESTAMP,
     updated_at      DATETIME      DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     deleted         TINYINT       DEFAULT 0,
@@ -318,6 +354,8 @@ CREATE TABLE recon_adjustment (
     currency        VARCHAR(3)    DEFAULT 'CNY',
     debit_account   VARCHAR(50)   COMMENT '借方科目',
     credit_account  VARCHAR(50)   COMMENT '贷方科目',
+    effective_date  DATE          COMMENT '生效日期',
+    posting_date    DATETIME      COMMENT '过账日期',
     description     TEXT          COMMENT '调整说明',
     attachment_urls JSON          COMMENT '附件URL列表',
     status          VARCHAR(20)   DEFAULT 'DRAFT' COMMENT 'DRAFT/APPROVED/POSTED/REVERSED',
@@ -571,7 +609,10 @@ INSERT INTO sys_permission (id, parent_id, perm_name, perm_code, perm_type, path
 (5, 0, '智能分析', 'analytics', 'MENU', '/analytics'),
 (6, 0, '审批中心', 'workflow', 'MENU', '/workflow'),
 (7, 0, '系统管理', 'system', 'MENU', '/system'),
-(8, 0, '开放平台', 'platform', 'MENU', '/platform');
+(8, 0, '开放平台', 'platform', 'MENU', '/platform'),
+(9, 0, '自定义对账', 'custom-recon:view', 'MENU', '/custom-recon'),
+(10, 9, '执行自定义对账', 'custom-recon:run', 'BUTTON', NULL),
+(11, 7, '大模型配置', 'system:ai', 'MENU', '/system/ai');
 
 -- 预置对账规则模板
 INSERT INTO recon_rule_config (id, org_id, rule_name, rule_code, rule_type, template_type, match_config, tolerance, priority) VALUES

@@ -97,6 +97,23 @@ public class DataSourceService {
     }
 
     /**
+     * 获取数据源的字段映射配置
+     */
+    public Map<String, Object> getFieldMapping(Long id) {
+        DataSource ds = getById(id);
+        String fieldMapping = ds.getFieldMapping();
+        if (StrUtil.isBlank(fieldMapping)) {
+            return Map.of();
+        }
+        try {
+            return JSONUtil.parseObj(fieldMapping);
+        } catch (Exception e) {
+            log.warn("数据源 {} 字段映射解析失败: {}", id, e.getMessage());
+            return Map.of();
+        }
+    }
+
+    /**
      * 创建数据源
      *
      * @param dataSource 数据源实体

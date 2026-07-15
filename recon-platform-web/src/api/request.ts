@@ -32,11 +32,11 @@ async function tryRefreshAccessToken(): Promise<string | null> {
   try {
     // 使用独立的axios调用，避免被此拦截器拦截造成无限循环
     const rawResponse = await axios.post(
-      '/api/v1/auth/refresh-token',
+      '/api/v1/auth/refresh',
       { refreshToken: storedRefreshToken },
       { headers: { 'Content-Type': 'application/json' } }
     )
-    const newToken = rawResponse.data?.data?.token
+    const newToken = rawResponse.data?.data?.accessToken
     if (newToken) {
       localStorage.setItem('token', newToken)
       return newToken

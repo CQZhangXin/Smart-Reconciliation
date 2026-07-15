@@ -57,19 +57,33 @@ public class DiscrepancyController {
         return ApiResponse.success(discrepancyService.classifyAndAnalyze(id));
     }
 
+    @Operation(summary = "根因分析")
+    @PostMapping("/{id}/root-cause")
+    public ApiResponse<com.recon.ai.dto.RootCauseResult> rootCauseAnalysis(@PathVariable Long id) {
+        log.info("根因分析: discrepancyId={}", id);
+        com.recon.ai.dto.RootCauseResult result = discrepancyService.analyzeRootCause(id);
+        return ApiResponse.success(result);
+    }
+
     @Operation(summary = "批量AI分类差异")
     @PostMapping("/batch-classify")
-    public ApiResponse<Void> batchClassify(@RequestParam Long taskId) {
-        log.info("批量AI分类差异: taskId={}", taskId);
-        discrepancyService.batchClassify(taskId);
+    public ApiResponse<Void> batchClassify(@RequestBody Map<String, Object> body) {
+        log.info("批量AI分类差异: body={}", body);
+        @SuppressWarnings("unchecked")
+        List<Long> ids = ((List<Number>) body.get("ids")).stream()
+                .map(Number::longValue).toList();
+        for (Long id : ids) {
+            discrepancyService.classifyAndAnalyze(id);
+        }
         return ApiResponse.success();
     }
 
     @Operation(summary = "分配处理人")
     @PutMapping("/{id}/assign")
     public ApiResponse<ReconDiscrepancy> assign(@PathVariable Long id,
-                                                 @RequestParam Long handlerId,
-                                                 @RequestParam String handlerName) {
+                                                 @RequestBody Map<String, Object> body) {
+        Long handlerId = toLong(body.get("handlerId"));
+        String handlerName = (String) body.get("handlerName");
         log.info("分配处理人: id={}, handlerId={}, handlerName={}", id, handlerId, handlerName);
         return ApiResponse.success(discrepancyService.assignHandler(id, handlerId, handlerName));
     }
@@ -86,7 +100,8 @@ public class DiscrepancyController {
 
     @Operation(summary = "关闭差异")
     @PutMapping("/{id}/close")
-    public ApiResponse<ReconDiscrepancy> close(@PathVariable Long id, @RequestParam Long resolvedBy) {
+    public ApiResponse<ReconDiscrepancy> close(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        Long resolvedBy = toLong(body.get("resolvedBy"));
         log.info("关闭差异: id={}, resolvedBy={}", id, resolvedBy);
         return ApiResponse.success(discrepancyService.closeDiscrepancy(id, resolvedBy));
     }
@@ -127,7 +142,8 @@ public class DiscrepancyController {
 
     @Operation(summary = "审批调整记录")
     @PutMapping("/adjustment/{id}/approve")
-    public ApiResponse<ReconAdjustment> approveAdjustment(@PathVariable Long id, @RequestParam Long approvedBy) {
+    public ApiResponse<ReconAdjustment> approveAdjustment(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        Long approvedBy = toLong(body.get("approvedBy"));
         log.info("审批调整记录: id={}, approvedBy={}", id, approvedBy);
         return ApiResponse.success(discrepancyService.approveAdjustment(id, approvedBy));
     }

@@ -7,8 +7,13 @@ export function getDashboard(orgId: number): Promise<DashboardData> {
 }
 
 /** 获取系统健康度 */
-export function getHealthMetrics(orgId?: number): Promise<HealthMetrics> {
-  return get('/analytics/health', orgId !== undefined ? { orgId } : {})
+export function getHealthMetrics(taskId?: number): Promise<HealthMetrics> {
+  return get('/analytics/health', taskId !== undefined ? { taskId } : {})
+}
+
+/** 按任务ID获取健康度 */
+export function getTaskHealth(taskId?: number): Promise<HealthMetrics> {
+  return get('/analytics/health', taskId !== undefined ? { taskId } : {})
 }
 
 /** 获取趋势数据 */
@@ -17,8 +22,8 @@ export function getTrend(orgId: number, months?: string): Promise<TrendDataItem[
 }
 
 /** 环比分析 */
-export function comparePeriods(params: { period1: string, period2: string }): Promise<Record<string, any>> {
-  return post('/analytics/compare', params)
+export function comparePeriods(orgId: number, period1: string, period2: string): Promise<Record<string, any>> {
+  return post('/analytics/compare', { orgId, period1, period2 })
 }
 
 /** 生成报告 */

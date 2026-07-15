@@ -270,9 +270,13 @@ async function handleClassify(row: ReconDiscrepancy) {
 }
 
 async function handleBatchClassify() {
+  if (selectedRows.value.length === 0) {
+    ElMessage.warning('请先选择差异记录')
+    return
+  }
   classifying.value = true
   try {
-    await batchClassify(query.orgId!)
+    await batchClassify(selectedRows.value.map(r => r.id!))
     ElMessage.success('批量分类已提交')
   } catch (e: any) {
     ElMessage.error('批量分类失败: ' + (e?.message || '未知错误'))

@@ -9,6 +9,9 @@
             <el-option label="第三方支付" value="THIRD_PAYMENT" />
             <el-option label="ERP系统" value="ERP" />
             <el-option label="文件导入" value="FILE_IMPORT" />
+            <el-option label="数据库直连" value="DATABASE" />
+            <el-option label="HTTP接口" value="HTTP_API" />
+            <el-option label="手工录入" value="MANUAL" />
           </el-select>
         </el-form-item>
         <el-form-item label="分类">
@@ -127,6 +130,9 @@
                 <el-option label="第三方支付" value="THIRD_PAYMENT" />
                 <el-option label="ERP系统" value="ERP" />
                 <el-option label="文件导入" value="FILE_IMPORT" />
+                <el-option label="数据库直连" value="DATABASE" />
+                <el-option label="HTTP接口" value="HTTP_API" />
+                <el-option label="手工录入" value="MANUAL" />
               </el-select>
             </el-form-item>
           </el-col>
@@ -196,7 +202,15 @@ const formRules: FormRules = {
 }
 
 function dsTypeLabel(type: string): string {
-  const map: Record<string, string> = { BANK_API: '银行API', THIRD_PAYMENT: '第三方支付', ERP: 'ERP系统', FILE_IMPORT: '文件导入' }
+  const map: Record<string, string> = {
+    BANK_API: '银行API',
+    THIRD_PAYMENT: '第三方支付',
+    ERP: 'ERP系统',
+    FILE_IMPORT: '文件导入',
+    DATABASE: '数据库直连',
+    HTTP_API: 'HTTP接口',
+    MANUAL: '手工录入'
+  }
   return map[type] || type
 }
 
@@ -297,8 +311,14 @@ async function handleSync(row: DataSource) {
   }
 }
 
-function handleToggleStatus(row: DataSource, val: boolean) {
-  ElMessage.info(`${val ? '启用' : '停用'}数据源: ${row.dsName}`)
+async function handleToggleStatus(row: DataSource, val: boolean) {
+  try {
+    await updateDataSource(row.id!, { ...row, status: val ? 'ACTIVE' : 'INACTIVE' })
+    ElMessage.success(`${val ? '启用' : '停用'}成功: ${row.dsName}`)
+    loadData()
+  } catch (e: any) {
+    ElMessage.error(`${val ? '启用' : '停用'}失败: ` + (e?.message || '未知错误'))
+  }
 }
 
 onMounted(() => { loadData() })

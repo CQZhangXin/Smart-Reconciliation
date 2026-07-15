@@ -83,7 +83,7 @@
 import { reactive, ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { FormInstance } from 'element-plus'
-import { pageRole, createRole, deleteRole, listAllPermissions, assignRolePermissions } from '@/api/system'
+import { pageRole, createRole, updateRole, deleteRole, listAllPermissions, assignRolePermissions } from '@/api/system'
 import { useAppStore } from '@/stores/app'
 import type { SysRole, SysPermission } from '@/types'
 
@@ -129,8 +129,13 @@ async function handleSubmit() {
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
   try {
-    await createRole(formData)
-    ElMessage.success(formData.id ? '更新成功' : '创建成功')
+    if (formData.id) {
+      await updateRole(formData.id, formData)
+      ElMessage.success('更新成功')
+    } else {
+      await createRole(formData)
+      ElMessage.success('创建成功')
+    }
     formVisible.value = false
     loadData()
   } catch (e: any) {

@@ -15,7 +15,7 @@ export const useUserStore = defineStore('user', () => {
   const refreshToken = ref<string>(localStorage.getItem('refreshToken') || '')
   const userInfo = ref<UserInfo | null>(null)
 
-  const isLoggedIn = computed(() => !!token.value)
+  const isLoggedIn = computed(() => !!token.value && !!userInfo.value)
   const username = computed(() => userInfo.value?.username || '')
   const realName = computed(() => userInfo.value?.realName || '')
 
@@ -41,7 +41,12 @@ export const useUserStore = defineStore('user', () => {
       const info = await getUserInfo()
       userInfo.value = info
     } catch {
-      // token可能已过期
+      // token可能已过期，清除本地状态
+      token.value = ''
+      refreshToken.value = ''
+      userInfo.value = null
+      localStorage.removeItem('token')
+      localStorage.removeItem('refreshToken')
     }
   }
 

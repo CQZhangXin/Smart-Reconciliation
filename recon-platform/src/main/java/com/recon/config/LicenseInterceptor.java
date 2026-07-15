@@ -54,7 +54,10 @@ public class LicenseInterceptor implements HandlerInterceptor {
         // 获取当前用户组织ID
         Long orgId = SecurityUtil.getCurrentOrgId();
         if (orgId == null) {
-            // 未获取到 orgId 但请求已通过认证，可能为系统级 API，放行
+            // 未获取到 orgId 但请求已通过认证。
+            // 安全风险：系统级 API 不应在此被静默放行。
+            // TODO: 生产环境应区分系统级 API（如 /api/system/health）并仅对白名单路径放行。
+            log.warn("LicenseInterceptor: orgId 为空但请求已放行，URI={}", requestUri);
             return true;
         }
 

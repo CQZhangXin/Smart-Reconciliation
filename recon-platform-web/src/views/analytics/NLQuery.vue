@@ -130,10 +130,33 @@ async function handleQuery() {
 }
 
 function copySQL() {
-  if (result.value?.generatedSql) {
-    navigator.clipboard.writeText(result.value.generatedSql)
-    ElMessage.success('SQL已复制到剪贴板')
+  if (!result.value?.generatedSql) return
+  const text = result.value.generatedSql
+  try {
+    navigator.clipboard.writeText(text).then(() => {
+      ElMessage.success('SQL已复制到剪贴板')
+    }).catch(() => {
+      fallbackCopy(text)
+    })
+  } catch {
+    fallbackCopy(text)
   }
+}
+
+function fallbackCopy(text: string) {
+  const textarea = document.createElement('textarea')
+  textarea.value = text
+  textarea.style.position = 'fixed'
+  textarea.style.opacity = '0'
+  document.body.appendChild(textarea)
+  textarea.select()
+  try {
+    document.execCommand('copy')
+    ElMessage.success('SQL已复制到剪贴板')
+  } catch {
+    ElMessage.error('复制失败，请手动复制')
+  }
+  document.body.removeChild(textarea)
 }
 </script>
 

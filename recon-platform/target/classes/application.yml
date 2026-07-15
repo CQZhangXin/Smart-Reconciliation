@@ -9,9 +9,9 @@ spring:
 
   # MySQL 数据源配置
   datasource:
-    url: jdbc:mysql://localhost:3306/recon_platform?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://localhost:3306/recondb?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: root
-    password: root
+    password: 123456
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       minimum-idle: 10
@@ -24,9 +24,9 @@ spring:
   # Redis 配置
   data:
     redis:
-      host: localhost
+      host: 127.0.0.1
       port: 6379
-      password:
+      # 本地 Redis 无密码，不配置 password，否则 Redisson 会尝试 AUTH 导致失败
       database: 0
       timeout: 5000ms
       lettuce:
@@ -36,9 +36,10 @@ spring:
           min-idle: 8
           max-wait: 3000ms
 
-  # Kafka 配置
+  # Kafka 配置（默认关闭：连不上也不影响启动；需要时设 spring.kafka.enabled=true）
   kafka:
-    bootstrap-servers: localhost:9092
+    enabled: ${KAFKA_ENABLED:false}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
@@ -51,6 +52,9 @@ spring:
       auto-offset-reset: earliest
       properties:
         spring.json.trusted.packages: "*"
+    listener:
+      # 未启用 Kafka 时不自动启动监听容器
+      auto-startup: ${spring.kafka.enabled:false}
 
   # Jackson 配置
   jackson:
@@ -86,16 +90,69 @@ jwt:
   expiration: 900000        # 15 minutes (access token)
   refresh-expiration: 604800000  # 7 days (refresh token)
 
-# AI 服务配置
+# AI 服务配置（支持国内大模型 DeepSeek / 通义千问 / Kimi 等）
 ai:
   llm:
-    provider: openai        # openai / claude / local
-    api-key: ${AI_API_KEY:your-api-key}
-    api-base: ${AI_API_BASE:https://api.openai.com/v1}
-    default-model: gpt-4o
-    simple-model: gpt-4o-mini
-    reasoning-model: gpt-4o
+    # mock | deepseek | qwen | kimi | openai | custom
+    provider: ${AI_PROVIDER:mock}
+    # 全局 Key / Base（也可写在 providers.<name> 下）
+    api-key: ${AI_API_KEY:}
+    base-url: ${AI_API_BASE:}
+    timeout-ms: 60000
+    max-retries: 2
+    temperature: 0.2
+    models:
+      default-model: ${AI_DEFAULT_MODEL:}
+      simple: ${AI_SIMPLE_MODEL:}
+      reasoning: ${AI_REASONING_MODEL:}
+    providers:
+      deepseek:
+        display-name: DeepSeek
+        base-url: https://api.deepseek.com/v1
+        api-key: ${DEEPSEEK_API_KEY:}
+        json-mode: true
+        models:
+          default-model: deepseek-chat
+          simple: deepseek-chat
+          reasoning: deepseek-reasoner
+      qwen:
+        display-name: 通义千问
+        base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+        api-key: ${DASHSCOPE_API_KEY:}
+        json-mode: true
+        models:
+          default-model: qwen-plus
+          simple: qwen-turbo
+          reasoning: qwen-max
+      kimi:
+        display-name: Kimi
+        base-url: https://api.moonshot.cn/v1
+        api-key: ${MOONSHOT_API_KEY:}
+        json-mode: true
+        models:
+          default-model: moonshot-v1-8k
+          simple: moonshot-v1-8k
+          reasoning: moonshot-v1-32k
+      openai:
+        display-name: OpenAI
+        base-url: https://api.openai.com/v1
+        api-key: ${OPENAI_API_KEY:${AI_API_KEY:}}
+        json-mode: true
+        models:
+          default-model: gpt-4o
+          simple: gpt-4o-mini
+          reasoning: gpt-4o
+      custom:
+        display-name: 自定义OpenAI兼容
+        base-url: ${AI_CUSTOM_BASE_URL:}
+        api-key: ${AI_CUSTOM_API_KEY:}
+        json-mode: true
+        models:
+          default-model: ${AI_CUSTOM_MODEL:}
+          simple: ${AI_CUSTOM_MODEL:}
+          reasoning: ${AI_CUSTOM_MODEL:}
   embedding:
+    provider: local
     model: bge-m3
     dimension: 1024
     local: true
@@ -108,7 +165,7 @@ ai:
 
 # 许可证配置
 license:
-  enabled: true                                           # 是否启用许可证校验
+  enabled: false                                           # 是否启用许可证校验（开发环境关闭）
   secret: recon-platform-license-default-secret-key       # 许可证加密密钥 (生产环境请覆盖)
 
 # 对账引擎配置
@@ -128,7 +185,7 @@ logging:
   level:
     root: INFO
     com.recon: DEBUG
-    org.springframework.security: INFO
+    org.springframework.security: DEBUG
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"
 
@@ -145,6 +202,10 @@ management:
   endpoint:
     health:
       show-details: when-authorized
+  health:
+    # Kafka 未启用或不可达时不拖垮整体健康检查
+    kafka:
+      enabled: ${spring.kafka.enabled:false}
 
 # Knife4j API 文档配置
 springdoc:

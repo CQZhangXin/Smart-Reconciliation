@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -108,7 +109,8 @@ public class ReconTaskController {
 
     @Operation(summary = "确认匹配结果")
     @PutMapping("/match/{id}/confirm")
-    public ApiResponse<String> confirmMatch(@PathVariable Long id, @RequestParam Long reviewedBy) {
+    public ApiResponse<String> confirmMatch(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        Long reviewedBy = toLong(body.get("reviewedBy"));
         log.info("确认匹配结果: id={}, reviewedBy={}", id, reviewedBy);
         reconTaskService.confirmMatch(id, reviewedBy);
         return ApiResponse.success("匹配结果已确认");
@@ -117,8 +119,9 @@ public class ReconTaskController {
     @Operation(summary = "拒绝匹配结果")
     @PutMapping("/match/{id}/reject")
     public ApiResponse<String> rejectMatch(@PathVariable Long id,
-                                            @RequestParam Long reviewedBy,
-                                            @RequestParam(required = false) String comment) {
+                                            @RequestBody Map<String, Object> body) {
+        Long reviewedBy = toLong(body.get("reviewedBy"));
+        String comment = (String) body.get("comment");
         log.info("拒绝匹配结果: id={}, reviewedBy={}, comment={}", id, reviewedBy, comment);
         reconTaskService.rejectMatch(id, reviewedBy, comment);
         return ApiResponse.success("匹配结果已拒绝");
@@ -129,5 +132,16 @@ public class ReconTaskController {
     public ApiResponse<List<ReconMatch>> pendingReview(@RequestParam Long taskId) {
         log.info("查询待审核匹配结果: taskId={}", taskId);
         return ApiResponse.success(reconTaskService.getPendingReviewMatches(taskId));
+    }
+
+    /** Safe Long conversion from Object */
+    private Long toLong(Object obj) {
+        if (obj == null) return null;
+        if (obj instanceof Number) return ((Number) obj).longValue();
+        try {
+            return Long.parseLong(obj.toString());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 }

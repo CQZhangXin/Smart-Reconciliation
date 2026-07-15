@@ -112,7 +112,7 @@ async function loadData() {
 }
 
 function handleSearch() { query.page = 1; loadData() }
-function handleReset() { query.module = ''; dateRange.value = []; handleSearch() }
+function handleReset() { query.module = ''; query.startTime = ''; query.endTime = ''; dateRange.value = []; handleSearch() }
 
 function showDetail(row: SysAuditLog) {
   currentLog.value = row

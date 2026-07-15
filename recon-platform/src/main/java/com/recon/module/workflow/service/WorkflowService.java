@@ -3,12 +3,15 @@ package com.recon.module.workflow.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.recon.ai.dto.ProcessDefNLResult;
+import com.recon.ai.service.AIService;
 import com.recon.common.enums.ResultCode;
 import com.recon.common.exception.BusinessException;
 import com.recon.module.system.entity.SysNotification;
 import com.recon.module.system.repository.SysNotificationMapper;
 import com.recon.module.workflow.entity.WfApprovalRecord;
 import com.recon.module.workflow.entity.WfProcessDefinition;
+import com.recon.module.workflow.dto.NLWorkflowParseResult;
 import com.recon.module.workflow.repository.WfApprovalRecordMapper;
 import com.recon.module.workflow.repository.WfProcessDefinitionMapper;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +32,7 @@ public class WorkflowService {
     private final WfProcessDefinitionMapper processDefMapper;
     private final WfApprovalRecordMapper approvalMapper;
     private final SysNotificationMapper notificationMapper;
+    private final AIService aiService;
 
     // ============================================================
     // Process Definition
@@ -74,6 +78,26 @@ public class WorkflowService {
         return processDefMapper.selectPage(pageObj, wrapper);
     }
 
+    /**
+     * 从自然语言解析流程定义
+     *
+     * @param description 用户自然语言描述
+     * @return NLWorkflowParseResult 解析结果
+     */
+    public NLWorkflowParseResult parseFromNL(String description) {
+        ProcessDefNLResult nlResult = aiService.generateProcessDefFromNL(description);
+
+        String warning = null;
+        if (nlResult.getSteps() == null || nlResult.getSteps().isEmpty()) {
+            warning = "AI 未能解析出审批步骤，请手动配置";
+        }
+
+        return NLWorkflowParseResult.builder()
+                .definition(nlResult)
+                .warning(warning)
+                .build();
+    }
+
     // ============================================================
     // Approval
     // ============================================================
@@ -83,6 +107,16 @@ public class WorkflowService {
      */
     public WfApprovalRecord submitApproval(Long orgId, String businessType,
                                             Long businessId, Long processDefId) {
+        // 校验流程定义是否存在且已发布
+        WfProcessDefinition processDef = processDefMapper.selectById(processDefId);
+        if (processDef == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "流程定义不存在: " + processDefId);
+        }
+        if (!"PUBLISHED".equals(processDef.getStatus())) {
+            throw new BusinessException(ResultCode.BAD_REQUEST,
+                    "流程定义未发布，当前状态: " + processDef.getStatus());
+        }
+
         WfApprovalRecord record = new WfApprovalRecord()
                 .setOrgId(orgId)
                 .setProcessDefId(processDefId)

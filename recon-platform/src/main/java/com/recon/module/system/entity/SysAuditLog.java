@@ -11,6 +11,11 @@ import java.time.LocalDateTime;
 
 /**
  * 审计日志
+ *
+ * <p><b>安全警告:</b> 本实体的 {@code requestParams} 和 {@code requestBody} 字段会完整存储
+ * HTTP请求的参数和请求体。服务层在调用审计日志记录之前<b>必须</b>对包含敏感信息
+ * (如密码、token、密钥等) 的字段进行脱敏处理，严禁将明文敏感数据写入审计表。
+ * </p>
  */
 @Data
 @Accessors(chain = true)

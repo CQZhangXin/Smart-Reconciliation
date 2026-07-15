@@ -5,6 +5,7 @@ import cn.hutool.core.bean.copier.CopyOptions;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.toolkit.Db;
 import com.recon.common.enums.ResultCode;
 import com.recon.common.exception.BusinessException;
 import com.recon.module.system.entity.*;
@@ -43,16 +44,23 @@ public class SystemService {
     // ============================================================
 
     /**
-     * 创建用户 — BCrypt编码密码, 默认ACTIVE状态
+     * 创建用户 — BCrypt编码密码, 默认ACTIVE状态。
+     *
+     * <p>不修改输入参数: 内部创建副本进行密码编码和插入操作。</p>
      */
+    @Transactional
     public SysUser createUser(SysUser user) {
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
-        if (user.getStatus() == null || user.getStatus().isBlank()) {
-            user.setStatus("ACTIVE");
+        // 创建副本以避免修改调用方的对象
+        SysUser create = new SysUser();
+        BeanUtil.copyProperties(user, create);
+        create.setPassword(passwordEncoder.encode(user.getPassword()));
+        if (create.getStatus() == null || create.getStatus().isBlank()) {
+            create.setStatus("ACTIVE");
         }
-        userMapper.insert(user);
-        user.setPassword(null);
-        return user;
+        userMapper.insert(create);
+        // 返回结果中清空密码
+        create.setPassword(null);
+        return create;
     }
 
     /**
@@ -173,9 +181,7 @@ public class SystemService {
                             .setRoleId(rid)
                             .setCreatedAt(LocalDateTime.now()))
                     .collect(Collectors.toList());
-            for (SysUserRole row : newRows) {
-                userRoleMapper.insert(row);
-            }
+            Db.saveBatch(newRows);
         }
     }
 
@@ -211,6 +217,22 @@ public class SystemService {
     }
 
     /**
+     * 更新角色
+     */
+    public SysRole updateRole(Long id, SysRole role) {
+        role.setId(id);
+        roleMapper.updateById(role);
+        return roleMapper.selectById(id);
+    }
+
+    /**
+     * 删除角色
+     */
+    public void deleteRole(Long id) {
+        roleMapper.deleteById(id);
+    }
+
+    /**
      * 分页查询角色
      */
     public IPage<SysRole> pageRoles(int page, int size, Long orgId) {
@@ -243,9 +265,7 @@ public class SystemService {
                             .setPermissionId(pid)
                             .setCreatedAt(LocalDateTime.now()))
                     .collect(Collectors.toList());
-            for (SysRolePermission row : newRows) {
-                rolePermMapper.insert(row);
-            }
+            Db.saveBatch(newRows);
         }
     }
 
@@ -359,6 +379,22 @@ public class SystemService {
     public OrgOrganization createOrg(OrgOrganization org) {
         orgMapper.insert(org);
         return org;
+    }
+
+    /**
+     * 更新组织
+     */
+    public OrgOrganization updateOrg(Long id, OrgOrganization org) {
+        org.setId(id);
+        orgMapper.updateById(org);
+        return orgMapper.selectById(id);
+    }
+
+    /**
+     * 删除组织
+     */
+    public void deleteOrg(Long id) {
+        orgMapper.deleteById(id);
     }
 
     /**

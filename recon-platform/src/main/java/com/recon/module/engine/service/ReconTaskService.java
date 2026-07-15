@@ -6,6 +6,7 @@ import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.toolkit.Db;
 import com.recon.common.enums.ResultCode;
 import com.recon.common.exception.BusinessException;
 import com.recon.module.datasource.entity.RawRecord;
@@ -197,24 +198,21 @@ public class ReconTaskService {
 
                 ReconDiscrepancy discrepancy = new ReconDiscrepancy()
                         .setTaskId(taskId)
-                        .setOrgId(task.getOrgId())
                         .setRecordId(unmatched.getId())
                         .setSide(side)
                         .setStatus(STATUS_PENDING)
                         .setAmount(unmatched.getAmount())
-                        .setAmountDiff(unmatched.getAmount())
-                        .setCreatedAt(LocalDateTime.now())
-                        .setUpdatedAt(LocalDateTime.now());
+                        .setAmountDiff(unmatched.getAmount());
+                discrepancy.setOrgId(task.getOrgId());
+                discrepancy.setCreatedAt(LocalDateTime.now());
+                discrepancy.setUpdatedAt(LocalDateTime.now());
                 discrepancies.add(discrepancy);
                 discrepancyCount++;
             }
 
             // 批量保存差异记录
-            // TODO: 生产环境建议使用 MyBatis-Plus saveBatch() 批量插入以提高性能
             if (!discrepancies.isEmpty()) {
-                for (ReconDiscrepancy discrepancy : discrepancies) {
-                    reconDiscrepancyMapper.insert(discrepancy);
-                }
+                Db.saveBatch(discrepancies);
                 log.info("差异记录生成完成: taskId={}, count={}", taskId, discrepancyCount);
             }
 
@@ -318,7 +316,7 @@ public class ReconTaskService {
     public void confirmMatch(Long matchId, Long reviewedBy) {
         ReconMatch match = getMatchById(matchId);
         if (!"PENDING_REVIEW".equals(match.getStatus())) {
-            throw new BusinessException(ResultCode.PARAM_ERROR, "只有待审核状态的匹配记录可以确认");
+            throw new BusinessException(ResultCode.BAD_REQUEST, "只有待审核状态的匹配记录可以确认");
         }
         match.setStatus(STATUS_MANUAL_CONFIRMED);
         match.setReviewedBy(reviewedBy);
@@ -340,7 +338,7 @@ public class ReconTaskService {
     public void rejectMatch(Long matchId, Long reviewedBy, String comment) {
         ReconMatch match = getMatchById(matchId);
         if (!"PENDING_REVIEW".equals(match.getStatus())) {
-            throw new BusinessException(ResultCode.PARAM_ERROR, "只有待审核状态的匹配记录可以驳回");
+            throw new BusinessException(ResultCode.BAD_REQUEST, "只有待审核状态的匹配记录可以驳回");
         }
         match.setStatus(STATUS_REJECTED);
         match.setReviewedBy(reviewedBy);

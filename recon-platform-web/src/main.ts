@@ -6,6 +6,7 @@ import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import App from './App.vue'
 import router from './router'
+import { useUserStore } from '@/stores/user'
 
 const app = createApp(App)
 
@@ -14,8 +15,16 @@ for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
   app.component(key, component)
 }
 
-app.use(createPinia())
+const pinia = createPinia()
+app.use(pinia)
 app.use(router)
 app.use(ElementPlus, { locale: zhCn })
 
-app.mount('#app')
+// 应用初始化：恢复用户会话后再挂载
+async function bootstrap() {
+  const userStore = useUserStore()
+  await userStore.restoreSession()
+  app.mount('#app')
+}
+
+bootstrap()

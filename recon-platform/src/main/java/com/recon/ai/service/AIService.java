@@ -8,9 +8,11 @@ import java.util.concurrent.CompletableFuture;
 /**
  * AI服务统一接口 — 对所有AI能力的抽象
  *
- * 实现类根据部署模式选择:
- * - CloudAIService: 调用云端 LLM API (OpenAI/Claude)
- * - LocalAIService: 调用本地部署模型 (Qwen/DeepSeek)
+ * <p>实现类根据部署模式选择:</p>
+ * <ul>
+ *   <li>MockAIService: 本地启发式 Mock（ai.llm.provider=mock）</li>
+ *   <li>LlmAIService: OpenAI 兼容协议，可接 DeepSeek / 通义千问 / Kimi / OpenAI / 私有化网关</li>
+ * </ul>
  */
 public interface AIService {
 
@@ -62,6 +64,25 @@ public interface AIService {
      * 自然语言规则生成
      */
     RuleGenerationResult generateRuleFromNL(String naturalLanguageDesc);
+
+    /**
+     * 自然语言生成对账方案定义
+     *
+     * @param description       用户自然语言描述
+     * @param availableSources  当前组织下可用的数据源名称列表
+     * @param availableRules    当前组织下可用的规则名称列表
+     * @return 对账方案定义结果（仅名称，不包含 ID）
+     */
+    ReconDefinitionNLResult generateReconDefinitionFromNL(
+            String description, List<String> availableSources, List<String> availableRules);
+
+    /**
+     * 自然语言生成审批流程定义
+     *
+     * @param description 用户自然语言描述
+     * @return 流程定义结果
+     */
+    ProcessDefNLResult generateProcessDefFromNL(String description);
 
     // ========== 报告生成 ==========
 

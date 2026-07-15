@@ -15,7 +15,8 @@ import java.util.concurrent.CompletableFuture;
 /**
  * AI服务Mock实现 — 用于开发和测试环境
  *
- * 生产环境替换为: CloudAIService (调用Claude/GPT API) 或 LocalAIService (本地模型)
+ * <p>当 ai.llm.provider 配置为 deepseek / qwen / kimi / openai / custom 时，
+ * 将自动注册 productionAIService（LlmAIService），本 Bean 不再生效。</p>
  */
 @Slf4j
 @Service
@@ -172,7 +173,8 @@ public class MockAIService implements AIService {
         log.info("[MockAI] NL查询: question={}", question);
         return NLQueryResult.builder()
                 .question(question)
-                .generatedSql("SELECT * FROM recon_discrepancy WHERE org_id = " + orgId + " LIMIT 10")
+                .generatedSql("-- TODO: 使用参数化查询，不应直接拼接 orgId 到 SQL 中\n" +
+                        "            SELECT * FROM recon_discrepancy WHERE org_id = " + orgId + " LIMIT 10")
                 .data(Collections.emptyList())
                 .answer("这是模拟的NL查询回答。在生产环境中，此处将返回基于实际数据的查询结果和分析。")
                 .extractedEntities(Map.of("intent", "QUERY"))
@@ -192,6 +194,51 @@ public class MockAIService implements AIService {
                 .explanation("根据自然语言描述自动生成的匹配规则")
                 .estimatedMatchRate(85)
                 .hasConflict(false)
+                .build();
+    }
+
+    @Override
+    public ReconDefinitionNLResult generateReconDefinitionFromNL(
+            String description, List<String> availableSources, List<String> availableRules) {
+        log.info("[MockAI] NL对账方案生成: {}", description);
+
+        String sourceA = availableSources != null && !availableSources.isEmpty()
+                ? availableSources.get(0) : "";
+        List<String> sourceBs = availableSources != null && availableSources.size() > 1
+                ? List.of(availableSources.get(1)) : List.of();
+        List<String> rules = availableRules != null && !availableRules.isEmpty()
+                ? List.of(availableRules.get(0)) : List.of();
+
+        return ReconDefinitionNLResult.builder()
+                .defName("Mock生成-" + System.currentTimeMillis() % 10000)
+                .defCode("MOCK_GEN_" + System.currentTimeMillis())
+                .description("Mock生成: " + description)
+                .sourceAName(sourceA)
+                .sourceBNames(sourceBs)
+                .ruleNames(rules)
+                .matchLayers(Map.of("exact", true, "rule", true, "ai", true, "split", false))
+                .periodType("MONTHLY")
+                .defaultPeriod("")
+                .aiExplanation("Mock模式: 默认取第一个可用数据源为A方，第二个为B方。请检查并调整。")
+                .build();
+    }
+
+    @Override
+    public ProcessDefNLResult generateProcessDefFromNL(String description) {
+        log.info("[MockAI] NL流程定义生成: {}", description);
+
+        List<ProcessDefNLResult.ProcessStepItem> steps = new ArrayList<>();
+        steps.add(ProcessDefNLResult.ProcessStepItem.builder()
+                .order(1).name("部门经理审批").approverRole("DEPT_MANAGER").build());
+        steps.add(ProcessDefNLResult.ProcessStepItem.builder()
+                .order(2).name("财务复核").approverRole("FINANCE").build());
+
+        return ProcessDefNLResult.builder()
+                .processName("Mock生成流程-" + System.currentTimeMillis() % 10000)
+                .processKey("MOCK_PROCESS_" + System.currentTimeMillis())
+                .description("Mock生成: " + description)
+                .steps(steps)
+                .aiExplanation("Mock模式: 默认生成两级审批流程（部门经理 → 财务复核）。请检查并调整。")
                 .build();
     }
 

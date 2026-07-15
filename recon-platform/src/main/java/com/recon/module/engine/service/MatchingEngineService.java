@@ -140,7 +140,7 @@ public class MatchingEngineService {
             // ========== Layer 2: 规则匹配 ==========
             if (CollUtil.isNotEmpty(recordsA) && CollUtil.isNotEmpty(recordsB)) {
                 layer++;
-                ruleCount = ruleMatch(recordsA, recordsB, taskId, orgId);
+                ruleCount = ruleMatch(recordsA, recordsB, taskId, orgId, task);
                 totalMatched += ruleCount;
                 log.info("[Layer {}] 规则匹配完成: {} 对, A剩余={}, B剩余={}",
                         layer, ruleCount, recordsA.size(), recordsB.size());
@@ -256,6 +256,9 @@ public class MatchingEngineService {
         recordsB.removeIf(b -> matchedBIds.contains(b.getId()));
 
         // 批量保存匹配
+        // 注意: Db.saveBatch() 会创建独立的SQL会话，绕过Spring @Transactional事务管理。
+        // 在需要事务一致性的场景下，建议改用 baseMapper.insert() 逐条插入
+        // 或让Service继承IService使用其saveBatch()方法
         if (CollUtil.isNotEmpty(matches)) {
             Db.saveBatch(matches);
         }
@@ -274,15 +277,24 @@ public class MatchingEngineService {
      * @param recordsB B方记录列表 (会被修改)
      * @param taskId   任务ID
      * @param orgId    组织ID
+     * @param task     对账任务（用于按 ruleIds 过滤规则，可为 null）
      * @return 匹配到的对数
      */
-    public int ruleMatch(List<RawRecord> recordsA, List<RawRecord> recordsB, Long taskId, Long orgId) {
+    public int ruleMatch(List<RawRecord> recordsA, List<RawRecord> recordsB, Long taskId,
+                         Long orgId, ReconTask task) {
         if (CollUtil.isEmpty(recordsA) || CollUtil.isEmpty(recordsB)) {
             return 0;
         }
 
-        // 加载活动规则(按优先级排序)
+        // 加载活动规则(按优先级排序)，若任务指定了 ruleIds 则仅使用这些规则
         List<ReconRuleConfig> rules = ruleConfigMapper.selectActiveRules(orgId);
+        Set<Long> selectedRuleIds = parseRuleIdSet(task != null ? task.getRuleIds() : null);
+        if (CollUtil.isNotEmpty(selectedRuleIds)) {
+            rules = rules.stream()
+                    .filter(r -> selectedRuleIds.contains(r.getId()))
+                    .collect(Collectors.toList());
+            log.info("任务指定规则过滤后剩余 {} 条: {}", rules.size(), selectedRuleIds);
+        }
         if (CollUtil.isEmpty(rules)) {
             log.info("无活动规则配置, 跳过规则匹配层");
             return 0;
@@ -373,6 +385,19 @@ public class MatchingEngineService {
         }
 
         return matches.size();
+    }
+
+    /**
+     * 兼容旧签名：不按任务规则过滤
+     *
+     * @param recordsA A方记录
+     * @param recordsB B方记录
+     * @param taskId   任务ID
+     * @param orgId    组织ID
+     * @return 匹配对数
+     */
+    public int ruleMatch(List<RawRecord> recordsA, List<RawRecord> recordsB, Long taskId, Long orgId) {
+        return ruleMatch(recordsA, recordsB, taskId, orgId, null);
     }
 
     // ========================================================================
@@ -622,7 +647,20 @@ public class MatchingEngineService {
         }
 
         try {
-            JSONArray jsonArray = JSONUtil.parseArray(matchConfigJson);
+            String trimmed = matchConfigJson.trim();
+            // 兼容 {"conditions":[...]} 与 顶层数组 [...]
+            if (trimmed.startsWith("{")) {
+                JSONObject root = JSONUtil.parseObj(trimmed);
+                Object conditionsObj = root.get("conditions");
+                if (conditionsObj == null) {
+                    log.warn("matchConfig 对象缺少 conditions 字段: {}", matchConfigJson);
+                    return Collections.emptyList();
+                }
+                trimmed = conditionsObj instanceof String
+                        ? (String) conditionsObj
+                        : JSONUtil.toJsonStr(conditionsObj);
+            }
+            JSONArray jsonArray = JSONUtil.parseArray(trimmed);
             List<Map<String, Object>> conditions = new ArrayList<>();
             for (int i = 0; i < jsonArray.size(); i++) {
                 JSONObject obj = jsonArray.getJSONObject(i);
@@ -636,6 +674,43 @@ public class MatchingEngineService {
         } catch (Exception e) {
             log.error("解析规则 matchConfig 失败: {}", matchConfigJson, e);
             return Collections.emptyList();
+        }
+    }
+
+    /**
+     * 解析任务绑定的规则ID集合
+     *
+     * @param ruleIdsJson 规则ID JSON（数组或逗号分隔）
+     * @return 规则ID集合
+     */
+    private Set<Long> parseRuleIdSet(String ruleIdsJson) {
+        if (StrUtil.isBlank(ruleIdsJson)) {
+            return Collections.emptySet();
+        }
+        try {
+            String trimmed = ruleIdsJson.trim();
+            Set<Long> ids = new HashSet<>();
+            if (trimmed.startsWith("[")) {
+                JSONArray arr = JSONUtil.parseArray(trimmed);
+                for (int i = 0; i < arr.size(); i++) {
+                    Object val = arr.get(i);
+                    if (val instanceof Number) {
+                        ids.add(((Number) val).longValue());
+                    } else if (val != null) {
+                        ids.add(Long.parseLong(val.toString()));
+                    }
+                }
+            } else {
+                for (String part : trimmed.split(",")) {
+                    if (StrUtil.isNotBlank(part)) {
+                        ids.add(Long.parseLong(part.trim()));
+                    }
+                }
+            }
+            return ids;
+        } catch (Exception e) {
+            log.warn("解析任务 ruleIds 失败: {}", ruleIdsJson, e);
+            return Collections.emptySet();
         }
     }
 
@@ -1145,34 +1220,6 @@ public class MatchingEngineService {
             return ((Number) weight).doubleValue();
         }
         return 1.0; // 默认权重
-    }
-
-    /**
-     * 完成任务并更新统计
-     */
-    private void finishTask(ReconTask task, int matchedCount, int unmatchedCount, int discrepancyCount) {
-        task.setStatus("COMPLETED");
-        task.setMatchedCount(matchedCount);
-        task.setUnmatchedCount(unmatchedCount);
-        task.setDiscrepancyCount(discrepancyCount);
-        task.setCompletedAt(LocalDateTime.now());
-
-        // 计算匹配率
-        int total = matchedCount + unmatchedCount;
-        if (total > 0) {
-            task.setMatchRate(BigDecimal.valueOf(matchedCount)
-                    .multiply(new BigDecimal("100"))
-                    .divide(BigDecimal.valueOf(total), 2, RoundingMode.HALF_UP));
-        } else {
-            task.setMatchRate(BigDecimal.ZERO);
-        }
-
-        if (task.getStartedAt() != null) {
-            task.setDurationMs(System.currentTimeMillis()
-                    - task.getStartedAt().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli());
-        }
-
-        reconTaskMapper.updateById(task);
     }
 
     /**

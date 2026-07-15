@@ -155,7 +155,11 @@ async function handleSubmit() {
   if (!valid) return
   try {
     if (formData.id) {
-      await updateUser(formData.id, formData)
+      const payload = { ...formData }
+      if (!payload.password) {
+        delete payload.password
+      }
+      await updateUser(formData.id, payload)
       ElMessage.success('更新成功')
     } else {
       await createUser(formData)

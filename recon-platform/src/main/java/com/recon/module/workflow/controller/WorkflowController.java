@@ -2,6 +2,7 @@ package com.recon.module.workflow.controller;
 
 import com.recon.common.response.ApiResponse;
 import com.recon.common.response.PageResult;
+import com.recon.module.workflow.dto.NLWorkflowParseResult;
 import com.recon.module.workflow.entity.WfApprovalRecord;
 import com.recon.module.workflow.entity.WfProcessDefinition;
 import com.recon.module.workflow.service.WorkflowService;
@@ -55,6 +56,15 @@ public class WorkflowController {
         log.info("发布流程定义: id={}", id);
         WfProcessDefinition definition = workflowService.publishProcessDef(id);
         return ApiResponse.success(definition);
+    }
+
+    @Operation(summary = "自然语言解析流程定义")
+    @PostMapping("/process-def/nl-parse")
+    public ApiResponse<NLWorkflowParseResult> nlParseProcessDef(@RequestBody Map<String, String> body) {
+        String description = body.get("description");
+        log.info("自然语言解析流程定义: description={}", description);
+        NLWorkflowParseResult result = workflowService.parseFromNL(description);
+        return ApiResponse.success(result);
     }
 
     // ========== 审批记录 ==========

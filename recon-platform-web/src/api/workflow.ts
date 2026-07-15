@@ -1,5 +1,12 @@
 import { get, post, put } from './request'
-import type { WfProcessDefinition, WfApprovalRecord, PageResult, PageQuery } from '@/types'
+import type {
+  WfProcessDefinition,
+  WfApprovalRecord,
+  PageResult,
+  PageQuery,
+  NLWorkflowParseRequest,
+  NLWorkflowParseResult
+} from '@/types'
 
 /** 分页查询流程定义 */
 export function pageProcessDef(params: PageQuery): Promise<PageResult<WfProcessDefinition>> {
@@ -9,6 +16,11 @@ export function pageProcessDef(params: PageQuery): Promise<PageResult<WfProcessD
 /** 创建流程定义 */
 export function createProcessDef(data: WfProcessDefinition): Promise<WfProcessDefinition> {
   return post('/workflow/process-def', data)
+}
+
+/** 自然语言解析流程定义 */
+export function nlParseProcessDef(data: NLWorkflowParseRequest): Promise<NLWorkflowParseResult> {
+  return post('/workflow/process-def/nl-parse', data)
 }
 
 /** 发布流程定义 */

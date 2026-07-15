@@ -20,7 +20,13 @@ import java.util.Scanner;
  */
 public class LicenseGenerator {
 
-    /** 默认密钥种子 (与 application.yml 中 license.secret 一致) */
+    /**
+     * 默认密钥种子 (与 application.yml 中 license.secret 一致)
+     *
+     * <b>安全警告:</b> 此密钥硬编码仅适用于开发/测试场景。
+     * 生产环境必须通过命令行参数或环境变量传入自定义密钥。
+     * TODO: 将密钥外部化，改为从命令行参数或配置文件读取。
+     */
     private static final String SECRET = "recon-platform-license-default-secret-key";
 
     public static void main(String[] args) {

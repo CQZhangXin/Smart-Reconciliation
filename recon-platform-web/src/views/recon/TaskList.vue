@@ -147,6 +147,8 @@
           <el-col :span="12">
             <el-form-item label="A方数据源" prop="sourceAId">
               <el-select v-model="formData.sourceAId" placeholder="请选择" style="width:100%">
+                <!-- TODO: These data source options should be fetched dynamically from the data source API
+                     (e.g., GET /api/datasources?category=SOURCE_A) instead of being hardcoded. -->
                 <el-option label="ERP系统" :value="1" />
                 <el-option label="财务系统" :value="2" />
               </el-select>
@@ -155,6 +157,7 @@
           <el-col :span="12">
             <el-form-item label="B方数据源" prop="sourceBId">
               <el-select v-model="formData.sourceBId" placeholder="请选择" style="width:100%">
+                <!-- TODO: These data source options should be fetched dynamically from the data source API instead of being hardcoded. -->
                 <el-option label="银行流水" :value="3" />
                 <el-option label="第三方支付" :value="4" />
               </el-select>

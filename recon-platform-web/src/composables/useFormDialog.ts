@@ -1,9 +1,10 @@
 import { ref } from 'vue'
+import type { FormInstance } from 'element-plus'
 
 export function useFormDialog<T extends Record<string, any>>(initData: () => T) {
   const dialogVisible = ref(false)
   const formData = ref<T>(initData())
-  const formRef = ref()
+  const formRef = ref<FormInstance>()
   const isEdit = ref(false)
 
   function openDialog(data?: T) {

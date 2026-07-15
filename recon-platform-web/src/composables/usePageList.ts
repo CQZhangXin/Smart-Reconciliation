@@ -14,6 +14,10 @@ export function usePageList<T extends { id?: number }>(options: UsePageListOptio
   const page = ref(1)
   const pageSize = ref(options.defaultPageSize || 10)
   const searchForm = reactive<Record<string, any>>({})
+  // NOTE: Search currently triggers immediately on change. Consider adding a debounce wrapper
+  // (e.g., lodash debounce or setTimeout-based) for search fields that fire on keystroke input
+  // to avoid excessive API calls. The type signature is intentionally kept as Record<string, any>
+  // because changing it to generics would break all existing consumers.
 
   async function fetchData() {
     loading.value = true

@@ -37,7 +37,7 @@ export function createRole(data: SysRole): Promise<SysRole> {
   return post('/system/role', data)
 }
 export function updateRole(id: number, data: Partial<SysRole>): Promise<SysRole> {
-  return put(`/system/roles/${id}`, data)
+  return put(`/system/role/${id}`, data)
 }
 export function deleteRole(id: number): Promise<void> {
   return del(`/system/role/${id}`)
@@ -67,10 +67,10 @@ export function createOrg(data: OrgOrganization): Promise<OrgOrganization> {
   return post('/system/org', data)
 }
 export function updateOrg(id: number, data: Partial<OrgOrganization>): Promise<OrgOrganization> {
-  return put(`/system/orgs/${id}`, data)
+  return put(`/system/org/${id}`, data)
 }
 export function deleteOrg(id: number): Promise<void> {
-  return del(`/system/orgs/${id}`)
+  return del(`/system/org/${id}`)
 }
 
 // ========== 账户管理 ==========

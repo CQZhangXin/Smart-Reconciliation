@@ -1,9 +1,9 @@
 package com.recon.common.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
 
 import java.io.Serializable;
 
@@ -20,6 +20,22 @@ public class ApiResponse<T> implements Serializable {
     private String message;
     private T data;
     private Long timestamp;
+    private String traceId;
+
+    /**
+     * 常用四参构造（不含 traceId）
+     *
+     * @param code      状态码
+     * @param message   消息
+     * @param data      数据
+     * @param timestamp 时间戳
+     */
+    public ApiResponse(int code, String message, T data, Long timestamp) {
+        this.code = code;
+        this.message = message;
+        this.data = data;
+        this.timestamp = timestamp;
+    }
 
     public static <T> ApiResponse<T> success() {
         return new ApiResponse<>(200, "操作成功", null, System.currentTimeMillis());

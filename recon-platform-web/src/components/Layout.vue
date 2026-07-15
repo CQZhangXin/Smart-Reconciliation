@@ -10,6 +10,7 @@
         :default-active="activeMenu"
         :collapse="sidebarCollapsed"
         :collapse-transition="false"
+        :default-openeds="defaultOpeneds"
         router
         background-color="#304156"
         text-color="#bfcbd9"
@@ -27,6 +28,10 @@
         <el-menu-item index="/rule">
           <el-icon><SetUp /></el-icon>
           <span>规则引擎</span>
+        </el-menu-item>
+        <el-menu-item index="/custom-recon">
+          <el-icon><Operation /></el-icon>
+          <span>自定义对账</span>
         </el-menu-item>
         <el-menu-item index="/recon/task">
           <el-icon><Monitor /></el-icon>
@@ -60,6 +65,7 @@
           <el-menu-item index="/system/user">用户管理</el-menu-item>
           <el-menu-item index="/system/role">角色管理</el-menu-item>
           <el-menu-item index="/system/license">许可证管理</el-menu-item>
+          <el-menu-item index="/system/ai">大模型配置</el-menu-item>
           <el-menu-item index="/system/audit-log">审计日志</el-menu-item>
         </el-sub-menu>
       </el-menu>
@@ -125,8 +131,25 @@ const userStore = useUserStore()
 const appStore = useAppStore()
 
 const sidebarCollapsed = computed(() => appStore.sidebarCollapsed)
-const activeMenu = computed(() => route.path)
+const activeMenu = computed(() => {
+  const path = route.path
+  if (path.startsWith('/custom-recon')) return '/custom-recon'
+  if (path.startsWith('/recon/match')) return '/recon/task'
+  if (path.startsWith('/discrepancy/') && path !== '/discrepancy/adjustment') return '/discrepancy'
+  return path
+})
 const currentTitle = computed(() => route.meta?.title as string || '')
+
+const defaultOpeneds = computed(() => {
+  const path = route.path
+  const opened: string[] = []
+  if (path.startsWith('/analytics')) opened.push('analytics-group')
+  if (path.startsWith('/workflow')) opened.push('workflow-group')
+  if (path.startsWith('/system')) opened.push('system-group')
+  if (path.startsWith('/recon')) opened.push('recon-group')
+  if (path.startsWith('/discrepancy')) opened.push('discrepancy-group')
+  return opened
+})
 
 function goHome() {
   router.push('/dashboard')

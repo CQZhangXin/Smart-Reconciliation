@@ -89,6 +89,11 @@ public class LicenseController {
         }
 
         // 仅超级管理员可吊销
+        // TODO: 当前 JWT Filter 未填充 authorities，hasRole 暂无法生效。
+        // 修复 JWT Filter 从 token claims 或数据库加载角色后，以下校验将自动生效。
+        if (!SecurityUtil.hasRole("ROLE_SUPER_ADMIN")) {
+            return ApiResponse.forbidden("仅超级管理员可执行吊销操作");
+        }
         licenseService.revoke(orgId);
         log.info("许可证已吊销: orgId={}", orgId);
         return ApiResponse.success("许可证已吊销");

@@ -47,7 +47,7 @@ public class SecurityConfig {
      * CORS allowed origins, loaded from application.yml.
      * In production, this should be set to specific frontend origins (not "*").
      */
-    @Value("${cors.allowed-origins:http://localhost:5173}")
+    @Value("${cors.allowed-origins:*}")
     private String allowedOrigins;
 
     /**
@@ -59,28 +59,21 @@ public class SecurityConfig {
         //       可通过 Nginx limit_req 或 Spring Cloud Gateway RequestRateLimiter 实现
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            // 本服务为无状态 JWT API，不依赖 Session，因此无需 CSRF 保护
             .csrf(csrf -> csrf.disable())
             .headers(headers -> headers
-                .contentTypeOptions(Customizer.withDefaults())                                    // X-Content-Type-Options: nosniff
-                .frameOptions(frameOptions -> frameOptions.deny())                                // X-Frame-Options: DENY
-                .xssProtection(xss -> xss.headerValue(XXssProtectionHeaderWriter.HeaderValue.ENABLED_MODE_BLOCK))  // X-XSS-Protection: 1; mode=block
+                .contentTypeOptions(Customizer.withDefaults())
+                .frameOptions(frameOptions -> frameOptions.deny())
+                .xssProtection(xss -> xss.headerValue(XXssProtectionHeaderWriter.HeaderValue.ENABLED_MODE_BLOCK))
             )
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                // 公开接口
-                // TODO: 生产环境中对 /api/v1/auth/login 实施速率限制（Nginx limit_req 或 Spring Cloud Gateway）
                 .requestMatchers("/api/v1/auth/login", "/api/v1/auth/refresh").permitAll()
                 .requestMatchers("/api/v1/open/health").permitAll()
                 .requestMatchers("/api/v1/license/status").permitAll()
-                // Swagger/Knife4j
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/doc.html", "/webjars/**").permitAll()
-                // Actuator
                 .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                 .requestMatchers("/actuator/**").hasRole("SUPER_ADMIN")
-                // 静态资源
                 .requestMatchers(HttpMethod.GET, "/static/**", "/*.html", "/*.css", "/*.js").permitAll()
-                // 其他接口需要认证
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
@@ -102,10 +95,9 @@ public class SecurityConfig {
                                             FilterChain filterChain) throws ServletException, IOException {
                 String token = extractToken(request);
 
+                log.debug("JWT filter: {} {}, hasToken={}", request.getMethod(), request.getRequestURI(), StringUtils.hasText(token));
+
                 if (!StringUtils.hasText(token)) {
-                    // 无 Token：放行请求
-                    //   公共端点（如 login、health）会正常响应
-                    //   受保护端点会由 Spring Security 返回 401，Message 中为 "Authentication required"
                     filterChain.doFilter(request, response);
                     return;
                 }
@@ -124,6 +116,8 @@ public class SecurityConfig {
                 Long orgId = jwtUtil.getOrgIdFromToken(token);
 
                 // 设置认证信息到 SecurityContext
+                // TODO: 应从 token claims 或数据库加载用户角色填充 authorities,
+                //       以支持 @PreAuthorize、hasRole() 等细粒度权限控制。
                 JwtAuthenticationToken authToken = new JwtAuthenticationToken(
                         userId, username, orgId, List.of());
                 authToken.setAuthenticated(true);

@@ -87,23 +87,46 @@ export const RISK_LEVEL_COLOR: Record<string, string> = {
 // ============ 数据源类型 ============
 
 export const DATA_SOURCE_TYPE_LABEL: Record<string, string> = {
+  BANK_API: '银行API',
+  THIRD_PAYMENT: '第三方支付',
   ERP: 'ERP系统',
+  FILE_IMPORT: '文件导入',
+  DATABASE: '数据库直连',
+  HTTP_API: 'HTTP接口',
+  MANUAL: '手工录入',
+  // 兼容旧值
   BANK: '银行接口',
   FILE: '文件导入',
   API: 'API对接'
 }
 
+export const CUSTOM_RECON_STATUS_LABEL: Record<string, string> = {
+  DRAFT: '草稿',
+  ACTIVE: '启用',
+  INACTIVE: '停用'
+}
+
+export const CUSTOM_RECON_STATUS_COLOR: Record<string, string> = {
+  DRAFT: 'info',
+  ACTIVE: 'success',
+  INACTIVE: 'danger'
+}
+
 // ============ 差异状态 ============
 
 export const DISCREPANCY_STATUS_LABEL: Record<string, string> = {
+  OPEN: '待处理',
   PENDING: '待处理',
+  IN_PROGRESS: '处理中',
   PROCESSING: '处理中',
   RESOLVED: '已解决',
   CLOSED: '已关闭'
 }
 
 export const DISCREPANCY_STATUS_COLOR: Record<string, string> = {
+  OPEN: 'warning',
   PENDING: 'warning',
+  IN_PROGRESS: 'info',
   PROCESSING: 'info',
   RESOLVED: 'success',
   CLOSED: ''
@@ -117,7 +140,8 @@ export const TASK_TYPE_OPTIONS = [
   { label: '应收对账', value: 'AR' },
   { label: '应付对账', value: 'AP' },
   { label: '内部对账', value: 'INTERNAL' },
-  { label: '跨系统对账', value: 'CROSS_SYSTEM' }
+  { label: '跨系统对账', value: 'CROSS_SYSTEM' },
+  { label: '自定义对账', value: 'CUSTOM' }
 ]
 
 export const MATCH_TYPE_OPTIONS = [
